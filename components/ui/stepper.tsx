@@ -104,7 +104,7 @@ const StepperHeader = React.forwardRef<HTMLDivElement, StepperHeaderProps>(
               <div key={index} className="flex items-center">
                 <div
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors",
+                    "flex size-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors",
                     {
                       "border-primary bg-primary text-primary-foreground":
                         isActive,
@@ -116,7 +116,7 @@ const StepperHeader = React.forwardRef<HTMLDivElement, StepperHeaderProps>(
                   )}
                 >
                   {isCompleted ? (
-                    <Icons.check className="h-4 w-4" />
+                    <Icons.check className="size-4" />
                   ) : (
                     stepNumber
                   )}

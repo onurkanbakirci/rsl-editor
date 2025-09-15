@@ -32,7 +32,7 @@ export default function CreateRSLLoading() {
             <CardContent className="space-y-6">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-10 w-32 ml-auto" />
+              <Skeleton className="ml-auto h-10 w-32" />
             </CardContent>
           </Card>
         </div>

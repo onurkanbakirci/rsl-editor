@@ -37,12 +37,12 @@ export default function RSLReviewLoading() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <Skeleton className="h-5 w-32" />
                 <Skeleton className="h-9 w-20" />
               </div>
-              <div className="rounded-lg border bg-background h-96">
-                <div className="p-4 space-y-2">
+              <div className="h-96 rounded-lg border bg-background">
+                <div className="space-y-2 p-4">
                   {[...Array(12)].map((_, i) => (
                     <Skeleton key={i} className="h-4 w-full" />
                   ))}

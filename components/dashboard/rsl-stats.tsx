@@ -60,12 +60,12 @@ export function RslStats() {
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 w-20 bg-muted rounded" />
-              <div className="h-4 w-4 bg-muted rounded" />
+              <div className="h-4 w-20 rounded bg-muted" />
+              <div className="size-4 rounded bg-muted" />
             </CardHeader>
             <CardContent>
-              <div className="h-8 w-16 bg-muted rounded mb-1" />
-              <div className="h-3 w-32 bg-muted rounded" />
+              <div className="mb-1 h-8 w-16 rounded bg-muted" />
+              <div className="h-3 w-32 rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
@@ -84,7 +84,7 @@ export function RslStats() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total RSLs</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -97,7 +97,7 @@ export function RslStats() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.thisMonth}</div>
@@ -110,7 +110,7 @@ export function RslStats() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.thisWeek}</div>
@@ -123,7 +123,7 @@ export function RslStats() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Sites</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
+            <Globe className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -154,7 +154,7 @@ function RslRadialChart({ total }: { total: number }) {
         <CardDescription>All time created documents</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
+        <div className="mx-auto flex aspect-square max-h-[250px] items-center justify-center">
           <div className="text-center">
             <div className="text-4xl font-bold text-foreground">{total}</div>
             <div className="text-sm text-muted-foreground">RSL Documents</div>
@@ -184,19 +184,19 @@ function RslTrendChart({ data }: { data: Array<{ month: string; total: number; c
       <CardContent className="flex-1">
         <div className="h-[200px] w-full">
           {/* Simple bar chart visualization */}
-          <div className="flex items-end justify-between h-full gap-2">
+          <div className="flex h-full items-end justify-between gap-2">
             {data.map((item, index) => {
               const maxValue = Math.max(...data.map(d => d.total));
               const height = maxValue > 0 ? (item.total / maxValue) * 100 : 10;
               
               return (
-                <div key={index} className="flex flex-col items-center flex-1">
+                <div key={index} className="flex flex-1 flex-col items-center">
                   <div 
-                    className="bg-primary/20 rounded-t w-full transition-all hover:bg-primary/30 min-h-[10px]"
+                    className="min-h-[10px] w-full rounded-t bg-primary/20 transition-all hover:bg-primary/30"
                     style={{ height: `${Math.max(10, height)}%` }}
                     title={`${item.month}: ${item.total} RSLs`}
                   />
-                  <div className="text-xs text-muted-foreground mt-2">{item.month}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">{item.month}</div>
                   <div className="text-xs font-medium">{item.total}</div>
                 </div>
               );

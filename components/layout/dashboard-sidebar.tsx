@@ -74,7 +74,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
             <div className="flex h-full max-h-screen flex-1 flex-col gap-2">
                 <div className="flex h-14 items-center justify-between p-4 lg:h-[60px]">
                   {/* {isSidebarExpanded ? <ProjectSwitcher /> : null} */}
-                  <div className={cn("flex items-center", isSidebarExpanded ? "justify-start" : "justify-center w-full")}>
+                  <div className={cn("flex items-center", isSidebarExpanded ? "justify-start" : "w-full justify-center")}>
                     <Icons.logo/>
                   </div>
                   <Button

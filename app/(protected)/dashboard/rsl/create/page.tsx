@@ -458,7 +458,7 @@ ${contentElements}
         </DashboardHeader>
 
         <div className="flex">
-          <div className="flex-1 w-[60%] pr-6">
+          <div className="w-3/5 flex-1 pr-6">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -468,11 +468,11 @@ ${contentElements}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative rounded-lg border bg-background max-h-[70vh] overflow-auto">
+                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
                       onClick={() => {
                         navigator.clipboard.writeText(generatedXml);
                         toast.success("XML copied to clipboard");
@@ -480,7 +480,7 @@ ${contentElements}
                     >
                       <Icons.copy className="size-4" />
                     </Button>
-                    <div className="pr-16 p-4">
+                    <div className="p-4 pr-16">
                       <HighlightedXml 
                         code={generatedXml} 
                         className="text-sm leading-relaxed"
@@ -493,8 +493,8 @@ ${contentElements}
           </div>
 
           {/* Right Sidebar - Actions */}
-          <div className="w-[40%] p-6 sticky top-0 h-screen overflow-y-auto" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
-            <Card className="border-0 shadow-none bg-transparent">
+          <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
+            <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icons.shield className="size-5" />
@@ -506,7 +506,7 @@ ${contentElements}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Website:</span>
-                    <span className="font-medium truncate ml-2" title={`${protocol}://${url}`}>
+                    <span className="ml-2 truncate font-medium" title={`${protocol}://${url}`}>
                       {`${protocol}://${url}`}
                     </span>
                   </div>
@@ -538,23 +538,23 @@ ${contentElements}
                 </div>
 
                 {/* Primary Actions */}
-                <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-4 border-t pt-4">
                   <h4 className="text-sm font-medium text-muted-foreground">Primary Actions</h4>
                   
                   <Button
                     onClick={handleSaveRsl}
                     disabled={isSaving || !generatedXml || !url}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full bg-green-600 text-white hover:bg-green-700"
                     size="lg"
                   >
                     {isSaving ? (
                       <>
-                        <Icons.spinner className="size-4 mr-2 animate-spin" />
+                        <Icons.spinner className="mr-2 size-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
                       <>
-                        <Icons.save className="size-4 mr-2" />
+                        <Icons.save className="mr-2 size-4" />
                         Save RSL Document
                       </>
                     )}
@@ -578,13 +578,13 @@ ${contentElements}
                     className="w-full"
                     size="lg"
                   >
-                    <Icons.download className="size-4 mr-2" />
+                    <Icons.download className="mr-2 size-4" />
                     Download XML File
                   </Button>
                 </div>
 
                 {/* Secondary Actions */}
-                <div className="space-y-3 pt-4 border-t">
+                <div className="space-y-3 border-t pt-4">
                   <h4 className="text-sm font-medium text-muted-foreground">Additional Options</h4>
                   
                   <Button
@@ -596,7 +596,7 @@ ${contentElements}
                       toast.success("XML copied to clipboard");
                     }}
                   >
-                    <Icons.copy className="size-4 mr-2" />
+                    <Icons.copy className="mr-2 size-4" />
                     Copy to Clipboard
                   </Button>
                   
@@ -611,18 +611,18 @@ ${contentElements}
                       setTimeout(() => URL.revokeObjectURL(url), 1000);
                     }}
                   >
-                    <Icons.arrowUpRight className="size-4 mr-2" />
+                    <Icons.arrowUpRight className="mr-2 size-4" />
                     Open in New Tab
                   </Button>
                 </div>
 
                 {/* Status Indicator */}
-                <div className="pt-4 border-t">
+                <div className="border-t pt-4">
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="size-2 rounded-full bg-green-500"></div>
                     <span className="text-muted-foreground">Document ready</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Your RSL document has been generated successfully and is ready to save or download.
                   </p>
                 </div>
@@ -656,7 +656,7 @@ ${contentElements}
       </DashboardHeader>
 
       <div className="flex">
-        <div className="flex-1 w-[60%] pr-6">
+        <div className="w-3/5 flex-1 pr-6">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -698,7 +698,7 @@ ${contentElements}
                     
                     <div className="rounded-lg bg-muted/50 p-4">
                       <div className="flex items-start gap-2">
-                        <Icons.help className="size-4 mt-0.5 text-muted-foreground" />
+                        <Icons.help className="mt-0.5 size-4 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
                           Links found during crawling or sitemap retrieval may be updated if new links are discovered or some links are invalid.
                         </p>
@@ -786,7 +786,7 @@ ${contentElements}
                   >
                     {isCrawling ? (
                       <>
-                        <Icons.spinner className="size-4 mr-2 animate-spin" />
+                        <Icons.spinner className="mr-2 size-4 animate-spin" />
                         Crawling...
                       </>
                     ) : (
@@ -809,15 +809,15 @@ ${contentElements}
                         placeholder="Search..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 w-64"
+                        className="w-64 pl-9"
                       />
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isCrawling ? (
-                    <div className="text-center py-12">
-                      <Icons.spinner className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <div className="py-12 text-center">
+                      <Icons.spinner className="mx-auto mb-4 size-8 animate-spin" />
                       <p className="text-lg font-medium">Crawling website...</p>
                       <p className="text-muted-foreground">This may take a few moments</p>
                     </div>
@@ -849,28 +849,28 @@ ${contentElements}
                       {/* All discovered URLs */}
                       <div className="space-y-3">
                         {crawledLinks.map((link) => (
-                          <div key={link.id} className="border rounded-lg">
+                          <div key={link.id} className="rounded-lg border">
                             {/* URL Header */}
                             <div 
-                              className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                              className="flex cursor-pointer items-center justify-between p-3 transition-colors hover:bg-muted/50"
                               onClick={() => toggleUrlExpanded(link.url)}
                             >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
                           <Checkbox 
                                   checked={link.selected}
                                   onCheckedChange={() => toggleLinkSelection(link.url)}
                             onClick={(e) => e.stopPropagation()}
                           />
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="text-sm truncate max-w-full">{link.url}</span>
-                                  <Badge variant="secondary" className="bg-green-500/10 text-green-700 border-green-200 text-xs flex-shrink-0">
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  <span className="max-w-full truncate text-sm">{link.url}</span>
+                                  <Badge variant="secondary" className="shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700">
                                 New
                               </Badge>
                             </div>
                               </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                              <div className="flex shrink-0 items-center gap-1">
                                 <Icons.chevronDown className={cn(
-                                  "size-4 transition-transform text-muted-foreground", 
+                                  "size-4 text-muted-foreground transition-transform", 
                                   expandedUrls.has(link.url) && "rotate-180"
                                 )} />
                             </div>
@@ -882,7 +882,7 @@ ${contentElements}
                                 {link.selected ? (
                                   <div className="space-y-4">
                                     <div className="mb-4">
-                                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold">
                                         RSL Configuration
                                       </h4>
                                     </div>
@@ -891,7 +891,7 @@ ${contentElements}
                                       {/* Content Settings Card */}
                                       <Card className="shadow-sm">
                                         <CardHeader className="pb-3">
-                                          <CardTitle className="text-sm flex items-center gap-2">
+                                          <CardTitle className="flex items-center gap-2 text-sm">
                                             <Icons.settings className="size-4" />
                                             Content Settings
                                           </CardTitle>
@@ -952,7 +952,7 @@ ${contentElements}
                                       <Card className="shadow-sm">
                                         <CardHeader className="pb-3">
                                           <div className="flex items-center justify-between">
-                                            <CardTitle className="text-sm flex items-center gap-2">
+                                            <CardTitle className="flex items-center gap-2 text-sm">
                                               License Management
                                             </CardTitle>
                                             {getCurrentLicenses(link.url).length > 0 && (
@@ -961,7 +961,7 @@ ${contentElements}
                                                 size="sm"
                                                 onClick={() => addLicense(link.url)}
                                               >
-                                                <Icons.add className="size-4 mr-1" />
+                                                <Icons.add className="mr-1 size-4" />
                                                 Add License
                                               </Button>
                                             )}
@@ -973,11 +973,11 @@ ${contentElements}
                                             
                                             if (licenses.length === 0) {
                                               return (
-                                                <div className="text-center py-8 px-4">
-                                                  <h3 className="text-sm font-medium text-muted-foreground mb-2">No licenses configured</h3>
-                                                  <p className="text-xs text-muted-foreground mb-4">Create your first license to define usage rights for this content.</p>
+                                                <div className="px-4 py-8 text-center">
+                                                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">No licenses configured</h3>
+                                                  <p className="mb-4 text-xs text-muted-foreground">Create your first license to define usage rights for this content.</p>
                                                   <Button onClick={() => addLicense(link.url)} size="sm">
-                                                    <Icons.add className="size-4 mr-1" />
+                                                    <Icons.add className="mr-1 size-4" />
                                                     Create First License
                                                   </Button>
                                                 </div>
@@ -991,14 +991,14 @@ ${contentElements}
                                               <div className="space-y-4">
                                                 {/* License Tabs */}
                                                 {licenses.length > 1 && (
-                                                  <div className="flex flex-wrap gap-2 p-2 bg-muted/50 rounded-lg">
+                                                  <div className="flex flex-wrap gap-2 rounded-lg bg-muted/50 p-2">
                                                     {licenses.map((license) => (
                                                       <div key={license.id} className="flex items-center">
                                                         <Button
                                                           variant={activeLicenseTab[link.url] === license.id ? "default" : "ghost"}
                                                           size="sm"
                                                           onClick={() => setActiveLicenseTab(prev => ({ ...prev, [link.url]: license.id }))}
-                                                          className="rounded-r-none h-8"
+                                                          className="h-8 rounded-r-none"
                                                         >
                                                           {license.name || `License ${licenses.indexOf(license) + 1}`}
                                                         </Button>
@@ -1006,7 +1006,7 @@ ${contentElements}
                               variant="ghost" 
                               size="sm"
                                                           onClick={() => removeLicense(link.url, license.id)}
-                                                          className="rounded-l-none border-l px-2 h-8 hover:bg-destructive hover:text-destructive-foreground"
+                                                          className="h-8 rounded-l-none border-l px-2 hover:bg-destructive hover:text-destructive-foreground"
                                                           disabled={licenses.length === 1}
                                                         >
                                                           <Icons.trash className="size-3" />
@@ -1017,12 +1017,12 @@ ${contentElements}
                                                 )}
 
                                                 {/* License Form */}
-                                                <div className="space-y-6 p-4 border rounded-lg bg-background">
+                                                <div className="space-y-6 rounded-lg border bg-background p-4">
                                                   {/* Basic License Info */}
                             <div className="space-y-4">
-                                                    <div className="flex items-center gap-2 pb-2 border-b">
+                                                    <div className="flex items-center gap-2 border-b pb-2">
                                                       <Icons.edit className="size-4" />
-                                                      <h4 className="font-medium text-sm">Basic Information</h4>
+                                                      <h4 className="text-sm font-medium">Basic Information</h4>
                                                     </div>
                               <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
@@ -1062,11 +1062,11 @@ ${contentElements}
 
                                                   {/* Usage Permissions */}
                                                   <div className="space-y-4">
-                                                    <div className="flex items-center gap-2 pb-2 border-b">
+                                                    <div className="flex items-center gap-2 border-b pb-2">
                                                       <Icons.check className="size-4 text-green-600" />
-                                                      <h4 className="font-medium text-sm">Permitted Usage</h4>
+                                                      <h4 className="text-sm font-medium">Permitted Usage</h4>
                               </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                                       {[
                                                         { id: "all", label: "All Usage" },
                                                         { id: "train-ai", label: "Train AI" },
@@ -1075,7 +1075,7 @@ ${contentElements}
                                                         { id: "ai-summarize", label: "AI Summarize" },
                                                         { id: "search", label: "Search" }
                                                       ].map((usage) => (
-                                                        <div key={usage.id} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                                                        <div key={usage.id} className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
                                                           <Checkbox 
                                                             id={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
                                                             checked={currentLicense.permits?.usage?.includes(usage.id) || false}
@@ -1092,7 +1092,7 @@ ${contentElements}
                                                               });
                                                             }}
                                                           />
-                                                          <Label htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`} className="text-sm font-medium cursor-pointer">
+                                                          <Label htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`} className="cursor-pointer text-sm font-medium">
                                                             {usage.label}
                                                           </Label>
                                 </div>
@@ -1138,8 +1138,8 @@ ${contentElements}
         </div>
 
         {/* Right Sidebar - Sources */}
-        <div className="w-[40%] p-6 sticky top-0 h-screen overflow-y-auto" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
-          <Card className="border-0 shadow-none bg-transparent">
+        <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
+          <Card className="border-0 bg-transparent shadow-none">
             <CardHeader>
               <CardTitle>Sources</CardTitle>
             </CardHeader>
@@ -1155,7 +1155,7 @@ ${contentElements}
               </div>
               
               <div>
-                <div className="flex items-center justify-between text-sm mb-2">
+                <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total size</span>
                   <div className="flex items-center gap-1">
                     <span className="font-medium">TBD / 400 KB</span>
@@ -1235,15 +1235,15 @@ ${contentElements}
       <Dialog open={showPlanLimitModal} onOpenChange={setShowPlanLimitModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <Icons.warning className="w-6 h-6 text-blue-600" />
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-blue-100">
+              <Icons.warning className="size-6 text-blue-600" />
             </div>
             <DialogTitle className="text-xl font-semibold">Plan limit reached!</DialogTitle>
             <DialogDescription className="text-center text-muted-foreground">
-              You've reached the total free limit of 10 links. You can delete some links to add new ones or upgrade your plan
+              You&apos;ve reached the total free limit of 10 links. You can delete some links to add new ones or upgrade your plan
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center mt-6">
+          <div className="mt-6 flex justify-center">
             <Button 
               onClick={() => setShowPlanLimitModal(false)}
               className="px-8"

@@ -71,13 +71,13 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer"
+      className="cursor-pointer transition-shadow hover:shadow-md"
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Icons.file className="size-5 text-muted-foreground" />
               {getWebsiteName(rsl.websiteUrl)}
             </CardTitle>
@@ -89,7 +89,7 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0"
+              className="size-8 p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 openXmlInNewTab();
@@ -104,7 +104,7 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 w-8 p-0"
+                  className="size-8 p-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Icons.ellipsis className="size-4" />
@@ -117,7 +117,7 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
                     onCardClick(rsl);
                   }}
                 >
-                  <Icons.edit className="mr-2 h-4 w-4" />
+                  <Icons.edit className="mr-2 size-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem 
@@ -127,7 +127,7 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
                   }}
                   className="text-red-600 focus:text-red-600"
                 >
-                  <Icons.trash className="mr-2 h-4 w-4" />
+                  <Icons.trash className="mr-2 size-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -230,11 +230,11 @@ export default function RSLPage() {
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
-                <div className="h-6 bg-muted rounded mb-2" />
-                <div className="h-4 bg-muted rounded w-2/3" />
+                <div className="mb-2 h-6 rounded bg-muted" />
+                <div className="h-4 w-2/3 rounded bg-muted" />
               </CardHeader>
               <CardContent>
-                <div className="h-4 bg-muted rounded w-1/2" />
+                <div className="h-4 w-1/2 rounded bg-muted" />
               </CardContent>
             </Card>
           ))}
@@ -250,11 +250,11 @@ export default function RSLPage() {
           heading="RSL"
           text="Create and manage your RSL configurations."
         />
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <div className="text-center">
-            <Icons.warning className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Error loading RSLs</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <Icons.warning className="mx-auto mb-4 size-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-semibold">Error loading RSLs</h3>
+            <p className="mb-4 text-muted-foreground">{error}</p>
             <Button onClick={() => window.location.reload()}>
               <Icons.arrowRight className="mr-2 size-4" />
               Try Again
@@ -284,20 +284,20 @@ export default function RSLPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
-          <div className="w-full max-w-[600px] mb-6">
+        <div className="flex min-h-[calc(100vh-200px)] flex-col items-center justify-center px-4">
+          <div className="mb-6 w-full max-w-[600px]">
             <Image
               src="/images/no-agents.webp"
               alt="No RSLs found"
               width={600}
               height={450}
               priority
-              className="w-full h-auto object-contain"
+              className="h-auto w-full object-contain"
             />
           </div>
-          <div className="text-center space-y-4 max-w-[500px]">
+          <div className="max-w-[500px] space-y-4 text-center">
             <h3 className="text-xl font-bold">No RSLs yet..</h3>
-            <p className="text-muted-foreground text-base leading-relaxed">
+            <p className="text-base leading-relaxed text-muted-foreground">
               Create your first RSL to start automating support, generating leads, and answering customer questions.
             </p>
             <div className="pt-2">
@@ -319,8 +319,8 @@ export default function RSLPage() {
         className="max-w-md"
       >
         <div className="flex flex-col items-center justify-center space-y-3 border-b p-4 pt-8 sm:px-16">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-            <Icons.trash className="h-6 w-6 text-red-600" />
+          <div className="flex size-10 items-center justify-center rounded-full bg-red-100">
+            <Icons.trash className="size-6 text-red-600" />
           </div>
           <h3 className="text-lg font-semibold">Delete RSL</h3>
           <p className="text-center text-sm text-muted-foreground">

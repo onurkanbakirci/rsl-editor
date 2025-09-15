@@ -24,7 +24,7 @@ export default async function HeroLanding() {
         </Link>
 
         <h1 className="text-balance font-urban text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-[66px]">
-          <span className="bg-gradient-to-r from-rsl-purple to-rsl-magenta bg-clip-text text-transparent font-extrabold">
+          <span className="bg-gradient-to-r from-rsl-purple to-rsl-magenta bg-clip-text font-extrabold text-transparent">
             RSL
           </span>
           <br className="hidden sm:block" />
@@ -48,7 +48,7 @@ export default async function HeroLanding() {
             prefetch={true}
             className={cn(
               buttonVariants({ size: "lg", rounded: "full" }),
-              "gap-2 bg-rsl-orange hover:bg-rsl-orange/90 text-white",
+              "gap-2 bg-rsl-orange text-white hover:bg-rsl-orange/90",
             )}
           >
             <span>Learn RSL</span>
