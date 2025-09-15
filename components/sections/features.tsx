@@ -8,14 +8,13 @@ import MaxWidthWrapper from "@/components/shared/max-width-wrapper";
 
 export default function Features() {
   return (
-    <section>
+    <section id="features">
       <div className="pb-6 pt-28">
         <MaxWidthWrapper>
           <HeaderSection
-            label="Features"
-            title="Discover all features."
-            subtitle="Harum quae dolore inventore repudiandae? orrupti aut temporibus
-          ariatur."
+            label="Resources"
+            title="RSL Documentation & Tools"
+            subtitle="Everything you need to understand, implement, and use Really Simple Licensing for your content."
           />
 
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,7 +34,10 @@ export default function Features() {
                       <Icon />
                     </div>
 
-                    <p className="mt-6 pb-6 text-muted-foreground">
+                    <h3 className="mt-6 font-semibold text-foreground">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 pb-6 text-muted-foreground">
                       {feature.description}
                     </p>
 
@@ -46,8 +48,8 @@ export default function Features() {
                         rounded="xl"
                         className="px-4"
                       >
-                        <Link href="/" className="flex items-center gap-2">
-                          <span>Visit the site</span>
+                        <Link href={feature.link} className="flex items-center gap-2">
+                          <span>Learn More</span>
                           <Icons.arrowUpRight className="size-4" />
                         </Link>
                       </Button>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { constructMetadata } from "@/lib/utils";
@@ -6,86 +9,146 @@ import { EmptyPlaceholder } from "@/components/shared/empty-placeholder";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/shared/icons";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata = constructMetadata({
-  title: "RSL – SaaS Starter",
-  description: "Create and manage your RSL configurations.",
-});
-
-// Mock RSL data structure
+// RSL data structure from API
 interface RSL {
   id: string;
-  name: string;
-  description: string;
-  status: "active" | "inactive" | "draft";
+  websiteUrl: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// Mock data - in real app this would come from an API
-const mockRSLs: RSL[] = [
-  // Uncomment to test with data:
-  // {
-  //   id: "1",
-  //   name: "User Authentication RSL",
-  //   description: "Handles user authentication and authorization logic",
-  //   status: "active",
-  //   createdAt: "2024-01-15",
-  //   updatedAt: "2024-01-20"
-  // },
-  // {
-  //   id: "2", 
-  //   name: "Payment Processing RSL",
-  //   description: "Manages payment workflows and transaction processing",
-  //   status: "draft",
-  //   createdAt: "2024-01-10",
-  //   updatedAt: "2024-01-18"
-  // }
-];
-
 function RSLCard({ rsl }: { rsl: RSL }) {
-  const statusColors = {
-    active: "bg-green-500/10 text-green-700 border-green-200",
-    inactive: "bg-gray-500/10 text-gray-700 border-gray-200", 
-    draft: "bg-yellow-500/10 text-yellow-700 border-yellow-200"
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getWebsiteName = (url: string) => {
+    try {
+      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+    } catch {
+      return url;
+    }
   };
 
   return (
-    <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold">{rsl.name}</h3>
-            <Badge 
-              variant="outline" 
-              className={statusColors[rsl.status]}
-            >
-              {rsl.status}
-            </Badge>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Icons.file className="size-5 text-muted-foreground" />
+              {getWebsiteName(rsl.websiteUrl)}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {rsl.websiteUrl}
+            </CardDescription>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            {rsl.description}
-          </p>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>Created: {rsl.createdAt}</span>
-            <span>Updated: {rsl.updatedAt}</span>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Icons.arrowUpRight className="size-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Icons.ellipsis className="size-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm">
-            <Icons.settings className="size-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Icons.ellipsis className="size-4" />
-          </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Icons.clock className="size-4" />
+            <span>Created {formatDate(rsl.createdAt)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Icons.clock className="size-4" />
+            <span>Updated {formatDate(rsl.updatedAt)}</span>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function RSLPage() {
-  const rsls = mockRSLs;
+  const [rsls, setRsls] = useState<RSL[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchRSLs() {
+      try {
+        const response = await fetch('/api/rsl');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setRsls(result.data || []);
+          } else {
+            setError('Failed to load RSL data');
+          }
+        } else {
+          setError('Failed to connect to server');
+        }
+      } catch (err) {
+        setError('Network error occurred');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRSLs();
+  }, []);
+
+  if (loading) {
+    return (
+      <>
+        <DashboardHeader
+          heading="RSL"
+          text="Create and manage your RSL configurations."
+        />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded mb-2" />
+                <div className="h-4 bg-muted rounded w-2/3" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-muted rounded w-1/2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <DashboardHeader
+          heading="RSL"
+          text="Create and manage your RSL configurations."
+        />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Icons.warning className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Error loading RSLs</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              <Icons.arrowRight className="mr-2 size-4" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -93,44 +156,45 @@ export default function RSLPage() {
         heading="RSL"
         text="Create and manage your RSL configurations."
       >
-        {rsls.length > 0 && (
-          <Link href="/dashboard/rsl/create">
-            <Button>
-              <Icons.add className="mr-2 size-4" />
-              Create New RSL
-            </Button>
-          </Link>
-        )}
+        <Link href="/dashboard/rsl/create">
+          <Button>
+            <Icons.add className="mr-2 size-4" />
+            {rsls.length > 0 ? "Create New RSL" : "Create First RSL"}
+          </Button>
+        </Link>
       </DashboardHeader>
       
       {rsls.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {rsls.map((rsl) => (
             <RSLCard key={rsl.id} rsl={rsl} />
           ))}
         </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="flex flex-col items-center text-center max-w-[700px]">
-            <div className="mb-8 w-full">
-              <Image
-                src="/images/no-agents.webp"
-                alt="No RSLs found"
-                width={1200}
-                height={1200}
-                className="mx-auto w-full max-w-[600px] h-auto"
-              />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">No RSLs yet..</h3>
-            <p className="text-muted-foreground mb-6 text-center">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
+          <div className="w-full max-w-[400px] mb-6">
+            <Image
+              src="/images/no-agents.webp"
+              alt="No RSLs found"
+              width={400}
+              height={300}
+              priority
+              className="w-full h-auto object-contain"
+            />
+          </div>
+          <div className="text-center space-y-4 max-w-[500px]">
+            <h3 className="text-2xl font-bold">No RSLs yet..</h3>
+            <p className="text-muted-foreground text-base leading-relaxed">
               Create your first RSL to start automating support, generating leads, and answering customer questions.
             </p>
-            <Link href="/dashboard/rsl/create">
-              <Button>
-                <Icons.add className="mr-2 size-4" />
-                New RSL
-              </Button>
-            </Link>
+            <div className="pt-2">
+              <Link href="/dashboard/rsl/create">
+                <Button size="lg" className="bg-black text-white hover:bg-black/90">
+                  <Icons.add className="mr-2 size-4" />
+                  New RSL
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       )}

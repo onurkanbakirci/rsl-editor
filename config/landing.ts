@@ -2,51 +2,51 @@ import { FeatureLdg, InfoLdg, TestimonialType } from "types";
 
 export const infos: InfoLdg[] = [
   {
-    title: "Empower your projects",
+    title: "Open Content Licensing",
     description:
-      "Unlock the full potential of your projects with our open-source SaaS platform. Collaborate seamlessly, innovate effortlessly, and scale limitlessly.",
+      "RSL provides a standardized, open approach to content licensing for the AI-first Internet. Define clear usage rights and permissions for your digital content.",
     image: "/_static/illustrations/work-from-home.jpg",
     list: [
       {
-        title: "Collaborative",
-        description: "Work together with your team members in real-time.",
-        icon: "laptop",
+        title: "Standardized Format",
+        description: "Use a consistent, machine-readable format for all content licensing.",
+        icon: "file",
       },
       {
-        title: "Innovative",
-        description: "Stay ahead of the curve with access constant updates.",
+        title: "AI-Ready",
+        description: "Purpose-built for AI training and content consumption use cases.",
         icon: "settings",
       },
       {
-        title: "Scalable",
+        title: "Open Standard",
         description:
-          "Our platform offers the scalability needed to adapt to your needs.",
-        icon: "search",
+          "Built as an open standard that anyone can implement and use freely.",
+        icon: "shield",
       },
     ],
   },
   {
-    title: "Seamless Integration",
+    title: "Simple Implementation",
     description:
-      "Integrate our open-source SaaS seamlessly into your existing workflows. Effortlessly connect with your favorite tools and services for a streamlined experience.",
+      "Implement RSL licensing with minimal effort. The specification is designed to be simple, clear, and easy to adopt across any platform or content management system.",
     image: "/_static/illustrations/work-from-home.jpg",
     list: [
       {
-        title: "Flexible",
+        title: "Easy Integration",
         description:
-          "Customize your integrations to fit your unique requirements.",
+          "Integrate RSL into existing systems with simple markup and metadata.",
         icon: "laptop",
       },
       {
-        title: "Efficient",
-        description: "Streamline your processes and reducing manual effort.",
-        icon: "search",
+        title: "Clear Documentation",
+        description: "Comprehensive guides and examples for quick implementation.",
+        icon: "bookOpen",
       },
       {
-        title: "Reliable",
+        title: "Flexible Licensing",
         description:
-          "Rely on our robust infrastructure and comprehensive documentation.",
-        icon: "settings",
+          "Support for various licensing models from open to restrictive use cases.",
+        icon: "arrowRight",
       },
     ],
   },
@@ -54,97 +54,90 @@ export const infos: InfoLdg[] = [
 
 export const features: FeatureLdg[] = [
   {
-    title: "Feature 1",
+    title: "RSL Guide",
     description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
-    icon: "nextjs",
+      "Comprehensive guide to understanding and implementing Really Simple Licensing.",
+    link: "/docs",
+    icon: "bookOpen",
   },
   {
-    title: "Feature 2",
+    title: "RSL Reference",
     description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
-    icon: "google",
+      "Complete technical reference for all RSL specification elements and attributes.",
+    link: "/docs",
+    icon: "file",
   },
   {
-    title: "Feature 3",
+    title: "RSL API",
     description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
-    icon: "gitHub",
+      "RESTful API for programmatic access to RSL validation and processing tools.",
+    link: "/docs",
+    icon: "settings",
   },
   {
-    title: "Feature 4",
+    title: "Licensing Templates",
     description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
-    icon: "laptop",
-  },
-  {
-    title: "Feature 5",
-    description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
-    icon: "user",
-  },
-  {
-    title: "Feature 6",
-    description:
-      "Amet praesentium deserunt ex commodi tempore fuga voluptatem. Sit, sapiente.",
-    link: "/",
+      "Pre-built licensing templates for common use cases and content types.",
+    link: "/docs",
     icon: "copy",
+  },
+  {
+    title: "Validation Tools",
+    description:
+      "Online tools to validate and verify your RSL implementations.",
+    link: "/dashboard",
+    icon: "shield",
+  },
+  {
+    title: "Community Support",
+    description:
+      "Join the RSL community for support, examples, and best practices.",
+    link: "/docs",
+    icon: "user",
   },
 ];
 
 export const testimonials: TestimonialType[] = [
   {
-    name: "John Doe",
-    job: "Full Stack Developer",
-    image: "https://randomuser.me/api/portraits/men/1.jpg",
+    name: "Dr. Emily Chen",
+    job: "AI Research Director",
+    image: "https://randomuser.me/api/portraits/women/1.jpg",
     review:
-      "The next-saas-stripe-starter repo has truly revolutionized my development workflow. With its comprehensive features and seamless integration with Stripe, I've been able to build and deploy projects faster than ever before. The documentation is clear and concise, making it easy to navigate through the setup process. I highly recommend next-saas-stripe-starter to any developer.",
+      "RSL has revolutionized how we handle content licensing for AI training. The standardized format makes it easy to respect content creators' rights while building responsible AI systems.",
   },
   {
-    name: "Alice Smith",
-    job: "UI/UX Designer",
-    image: "https://randomuser.me/api/portraits/women/2.jpg",
+    name: "Marcus Rodriguez",
+    job: "Content Platform CEO",
+    image: "https://randomuser.me/api/portraits/men/2.jpg",
     review:
-      "Thanks to next-saas-stripe-starter, I've been able to create modern and attractive user interfaces in record time. The starter kit provides a solid foundation for building sleek and intuitive designs, allowing me to focus more on the creative aspects of my work.",
+      "Implementing RSL across our platform was straightforward and has given our creators clear control over how their content is used. It's exactly what the industry needed.",
   },
   {
-    name: "David Johnson",
-    job: "DevOps Engineer",
-    image: "https://randomuser.me/api/portraits/men/3.jpg",
+    name: "Jennifer Kim",
+    job: "Digital Rights Manager",
+    image: "https://randomuser.me/api/portraits/women/3.jpg",
     review:
-      "Thanks to next-saas-stripe-starter, I was able to streamline the entire process and get payments up and running in no time. ",
+      "RSL's simplicity is its strength. We can now express complex licensing terms in a way that both humans and machines can understand and respect.",
   },
   {
-    name: "Michael Wilson",
-    job: "Project Manager",
-    image: "https://randomuser.me/api/portraits/men/5.jpg",
+    name: "David Thompson",
+    job: "Open Source Advocate",
+    image: "https://randomuser.me/api/portraits/men/4.jpg",
     review:
-      "I'm impressed by the quality of code and clear documentation of next-saas-stripe-starter. Kudos to the team!",
+      "As an open standard, RSL represents the best of collaborative development. It's licensing for the modern, AI-first internet we're building together.",
   },
   {
-    name: "Sophia Garcia",
-    job: "Data Analyst",
-    image: "https://randomuser.me/api/portraits/women/6.jpg",
+    name: "Lisa Wang",
+    job: "Publisher CTO",
+    image: "https://randomuser.me/api/portraits/women/5.jpg",
     review:
-      "next-saas-stripe-starter provided me with the tools I needed to efficiently manage user data. Thank you so much!",
+      "RSL integrates perfectly with our existing content management systems. The clear documentation and examples made implementation painless.",
   },
   {
-    name: "Emily Brown",
-    job: "Marketing Manager",
-    image: "https://randomuser.me/api/portraits/women/4.jpg",
+    name: "Alex Johnson",
+    job: "Legal Tech Specialist",
+    image: "https://randomuser.me/api/portraits/men/6.jpg",
     review:
-      "next-saas-stripe-starter has been an invaluable asset in my role as a marketing manager. With its seamless integration with Stripe, I've been able to launch targeted marketing campaigns with built-in payment functionality, allowing us to monetize our products and services more effectively.",
-  },
-  {
-    name: "Jason Stan",
-    job: "Web Designer",
-    image: "https://randomuser.me/api/portraits/men/9.jpg",
-    review:
-      "Thanks to next-saas-stripe-starter, I've been able to create modern and attractive user interfaces in record time. The starter kit provides a solid foundation for building sleek and intuitive designs, allowing me to focus more on the creative aspects of my work.",
+      "From a legal perspective, RSL provides the clarity and precision we need for content licensing in the digital age. It's a game-changer for rights management.",
   },
 ];

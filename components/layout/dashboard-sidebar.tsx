@@ -71,15 +71,17 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
             )}
           >
             <div className="flex h-full max-h-screen flex-1 flex-col gap-2">
-              <div className="flex h-14 items-center p-4 lg:h-[60px]">
-                {isSidebarExpanded ? <ProjectSwitcher /> : null}
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto size-9 lg:size-8"
-                  onClick={toggleSidebar}
-                >
+                <div className="flex h-14 items-center justify-between p-4 lg:h-[60px]">
+                  {/* {isSidebarExpanded ? <ProjectSwitcher /> : null} */}
+                  <div className={cn("flex items-center", isSidebarExpanded ? "justify-start" : "justify-center w-full")}>
+                    <Icons.logo />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("size-9 lg:size-8", isSidebarExpanded ? "ml-2" : "absolute right-2")}
+                    onClick={toggleSidebar}
+                  >
                   {isSidebarExpanded ? (
                     <PanelLeftClose
                       size={18}
@@ -200,17 +202,14 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
           <ScrollArea className="h-full overflow-y-auto">
             <div className="flex h-screen flex-col">
               <nav className="flex flex-1 flex-col gap-y-8 p-6 text-lg font-medium">
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 text-lg font-semibold"
-                >
-                  <Icons.logo className="size-6" />
+                <div className="flex items-center gap-3 text-lg font-semibold">
+                  <Icons.logo />
                   <span className="font-urban text-xl font-bold">
-                    {siteConfig.name}
+                    RSL
                   </span>
-                </Link>
+                </div>
 
-                <ProjectSwitcher large />
+                {/* <ProjectSwitcher large /> */}
 
                 {links.map((section) => (
                   <section

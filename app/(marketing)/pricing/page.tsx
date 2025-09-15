@@ -9,8 +9,8 @@ import { PricingCards } from "@/components/pricing/pricing-cards";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 
 export const metadata = constructMetadata({
-  title: "Pricing – SaaS Starter",
-  description: "Explore our subscription plans.",
+  title: "Pricing – RSL",
+  description: "Choose the right plan for implementing Really Simple Licensing.",
 });
 
 export default async function PricingPage() {

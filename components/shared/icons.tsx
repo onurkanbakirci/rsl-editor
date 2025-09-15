@@ -12,6 +12,7 @@ import {
   Clock,
   Copy,
   CreditCard,
+  Download,
   Edit,
   File,
   FileText,
@@ -31,6 +32,7 @@ import {
   Package,
   Plus,
   Puzzle,
+  Save,
   Search,
   Settings,
   Shield,
@@ -39,6 +41,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import NextImage from "next/image";
 
 export type Icon = LucideIcon;
 
@@ -58,6 +61,7 @@ export const Icons = {
   close: X,
   copy: Copy,
   dashboard: LayoutPanelLeft,
+  download: Download,
   edit: Edit,
   ellipsis: MoreVertical,
   gitHub: ({ ...props }: LucideProps) => (
@@ -117,13 +121,22 @@ export const Icons = {
   info: Info,
   laptop: Laptop,
   lineChart: LineChart,
-  logo: Puzzle,
+  logo: ({ ...props }: LucideProps) => (
+    <NextImage
+      src="/images/rsl-logo.png"
+      alt="RSL Logo"
+      width={32}
+      height={32}
+      {...props}
+    />
+  ),
   media: Image,
   messages: MessagesSquare,
   moon: Moon,
   package: Package,
   page: File,
   post: FileText,
+  save: Save,
   search: Search,
   settings: Settings,
   shield: Shield,

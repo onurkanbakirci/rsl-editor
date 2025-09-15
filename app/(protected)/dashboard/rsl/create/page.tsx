@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { Icons } from "@/components/shared/icons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
+import { HighlightedXml } from "@/components/shared/highlighted-xml";
 import Link from "next/link";
 
 // Types for crawled links with RSL data
@@ -106,6 +108,10 @@ export default function CreateRSLPage() {
   const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
+  const [showXmlPreview, setShowXmlPreview] = useState(false);
+  const [generatedXml, setGeneratedXml] = useState("");
+  const [isGeneratingXml, setIsGeneratingXml] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFetchLinks = async () => {
     if (!url) return;
@@ -236,6 +242,182 @@ export default function CreateRSLPage() {
     });
   };
 
+  const generateRslXml = () => {
+    const selectedLinks = crawledLinks.filter(link => link.selected && link.formData?.rsl);
+    
+    if (selectedLinks.length === 0) {
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<rsl xmlns="https://rslstandard.org/rsl">
+  <!-- No content selected for licensing -->
+</rsl>`;
+    }
+
+    const contentElements = selectedLinks.map(link => {
+      const rslData = link.formData!.rsl!;
+      const licenses = rslData.licenses || [];
+      
+      // Build content attributes
+      let contentAttrs = `url="${link.url}"`;
+      if (rslData.licenseServer) contentAttrs += ` server="${rslData.licenseServer}"`;
+      if (rslData.encrypted) contentAttrs += ` encrypted="true"`;
+      if (rslData.lastModified) contentAttrs += ` lastmod="${rslData.lastModified}"`;
+      
+      // Build license elements
+      const licenseElements = licenses.map(license => {
+        let licenseContent = '';
+        
+        // Permits
+        if (license.permits?.usage?.length) {
+          licenseContent += `    <permits type="usage">${license.permits.usage.join(',')}</permits>\n`;
+        }
+        if (license.permits?.user?.length) {
+          licenseContent += `    <permits type="user">${license.permits.user.join(',')}</permits>\n`;
+        }
+        if (license.permits?.geo?.length) {
+          licenseContent += `    <permits type="geo">${license.permits.geo.join(',')}</permits>\n`;
+        }
+        
+        // Prohibits
+        if (license.prohibits?.usage?.length) {
+          licenseContent += `    <prohibits type="usage">${license.prohibits.usage.join(',')}</prohibits>\n`;
+        }
+        if (license.prohibits?.user?.length) {
+          licenseContent += `    <prohibits type="user">${license.prohibits.user.join(',')}</prohibits>\n`;
+        }
+        if (license.prohibits?.geo?.length) {
+          licenseContent += `    <prohibits type="geo">${license.prohibits.geo.join(',')}</prohibits>\n`;
+        }
+        
+        // Payment
+        if (license.payment?.type) {
+          let paymentContent = '';
+          if (license.payment.standardUrls?.length) {
+            paymentContent += license.payment.standardUrls.map(url => `      <standard>${url}</standard>`).join('\n') + '\n';
+          }
+          if (license.payment.customUrl) {
+            paymentContent += `      <custom>${license.payment.customUrl}</custom>\n`;
+          }
+          if (license.payment.amount && license.payment.currency) {
+            paymentContent += `      <amount currency="${license.payment.currency}">${license.payment.amount}</amount>\n`;
+          }
+          
+          if (paymentContent) {
+            licenseContent += `    <payment type="${license.payment.type}">\n${paymentContent}    </payment>\n`;
+          } else {
+            licenseContent += `    <payment type="${license.payment.type}"/>\n`;
+          }
+        }
+        
+        // Legal
+        if (license.legal?.length) {
+          license.legal.forEach(legal => {
+            if (legal.terms.length) {
+              licenseContent += `    <legal type="${legal.type}">${legal.terms.join(',')}</legal>\n`;
+            }
+          });
+        }
+        
+        return `  <license>\n${licenseContent}  </license>`;
+      }).join('\n');
+      
+      // Build metadata elements
+      let metadataElements = '';
+      if (rslData.metadata?.schemaUrl) {
+        metadataElements += `  <schema>${rslData.metadata.schemaUrl}</schema>\n`;
+      }
+      if (rslData.metadata?.copyrightType || rslData.metadata?.contactEmail || rslData.metadata?.contactUrl) {
+        let copyrightAttrs = '';
+        if (rslData.metadata.copyrightType) copyrightAttrs += ` type="${rslData.metadata.copyrightType}"`;
+        if (rslData.metadata.contactEmail) copyrightAttrs += ` contactEmail="${rslData.metadata.contactEmail}"`;
+        if (rslData.metadata.contactUrl) copyrightAttrs += ` contactUrl="${rslData.metadata.contactUrl}"`;
+        metadataElements += `  <copyright${copyrightAttrs}/>\n`;
+      }
+      if (rslData.metadata?.termsUrl) {
+        metadataElements += `  <terms>${rslData.metadata.termsUrl}</terms>\n`;
+      }
+      
+      return `  <content ${contentAttrs}>
+${licenseElements}
+${metadataElements}  </content>`;
+    }).join('\n');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rsl xmlns="https://rslstandard.org/rsl">
+${contentElements}
+</rsl>`;
+  };
+
+  const handleCreateRsl = async () => {
+    setIsGeneratingXml(true);
+    
+    // Simulate loading time for better UX
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const xml = generateRslXml();
+    setGeneratedXml(xml);
+    setIsGeneratingXml(false);
+    setShowXmlPreview(true);
+  };
+
+  const handleSaveRsl = async () => {
+    if (!generatedXml) {
+      toast.error("No RSL document to save", {
+        description: "Please generate an RSL document first by clicking 'Create RSL'.",
+      });
+      return;
+    }
+    
+    if (!url) {
+      toast.error("Missing website URL", {
+        description: "Please enter a website URL before saving.",
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      const response = await fetch('/api/rsl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          websiteUrl: `${protocol}://${url}`,
+          xmlContent: generatedXml,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          toast.success("RSL saved successfully!", {
+            description: `Your RSL document for ${protocol}://${url} has been saved.`,
+          });
+          // Optional: redirect to RSL list page after a delay
+          // setTimeout(() => {
+          //   window.location.href = '/dashboard/rsl';
+          // }, 2000);
+        } else {
+          toast.error("Failed to save RSL", {
+            description: "There was an error saving your RSL document. Please try again.",
+          });
+        }
+      } else {
+        toast.error("Something went wrong", {
+          description: `HTTP error ${response.status}. Please try again.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving RSL:', error);
+      toast.error("Network error", {
+        description: "Unable to connect to the server. Please check your connection and try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const toggleUrlExpanded = (url: string) => {
     setExpandedUrls(prev => {
       const newSet = new Set(prev);
@@ -252,6 +434,94 @@ export default function CreateRSLPage() {
     link.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // XML Preview state
+  if (showXmlPreview) {
+    return (
+      <>
+        <DashboardHeader
+          heading="RSL Document Preview"
+          text="Generated RSL XML document based on your configuration"
+        >
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setShowXmlPreview(false)}
+            >
+              <Icons.arrowLeft className="mr-2 size-4" />
+              Back to Form
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSaveRsl}
+              disabled={isSaving || !generatedXml || !url}
+            >
+              {isSaving ? (
+                <>
+                  <Icons.spinner className="size-4 mr-1 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Icons.save className="size-4 mr-1" />
+                  Save
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => {
+                const blob = new Blob([generatedXml], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rsl-document.xml';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              disabled={isSaving}
+            >
+              <Icons.download className="size-4 mr-1" />
+              Download XML
+            </Button>
+          </div>
+        </DashboardHeader>
+
+        <div className="max-w-6xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">RSL Document</CardTitle>
+              <CardDescription>
+                This is your generated RSL XML document. You can copy it to clipboard or download it as a file.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative rounded-lg border bg-background max-h-[70vh] overflow-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedXml);
+                  }}
+                >
+                  <Icons.copy className="size-4" />
+                </Button>
+                <div className="pr-16 p-4">
+                  <HighlightedXml 
+                    code={generatedXml} 
+                    className="text-sm leading-relaxed"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  // Main form state
   return (
     <>
       <DashboardHeader
@@ -479,7 +749,6 @@ export default function CreateRSLPage() {
                             onClick={(e) => e.stopPropagation()}
                           />
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <Icons.logo className="size-4 flex-shrink-0" />
                                   <span className="text-sm truncate max-w-full">{link.url}</span>
                                   <Badge variant="secondary" className="bg-green-500/10 text-green-700 border-green-200 text-xs flex-shrink-0">
                                 New
@@ -501,7 +770,6 @@ export default function CreateRSLPage() {
                                   <div className="space-y-4">
                                     <div className="mb-4">
                                       <h4 className="text-sm font-semibold flex items-center gap-2">
-                                        <Icons.shield className="size-4" />
                                         RSL Configuration
                                       </h4>
                                     </div>
@@ -572,7 +840,6 @@ export default function CreateRSLPage() {
                                         <CardHeader className="pb-3">
                                           <div className="flex items-center justify-between">
                                             <CardTitle className="text-sm flex items-center gap-2">
-                                              <Icons.shield className="size-4" />
                                               License Management
                                             </CardTitle>
                                             {getCurrentLicenses(link.url).length > 0 && (
@@ -594,7 +861,6 @@ export default function CreateRSLPage() {
                                             if (licenses.length === 0) {
                                               return (
                                                 <div className="text-center py-8 px-4">
-                                                  <Icons.shield className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
                                                   <h3 className="text-sm font-medium text-muted-foreground mb-2">No licenses configured</h3>
                                                   <p className="text-xs text-muted-foreground mb-4">Create your first license to define usage rights for this content.</p>
                                                   <Button onClick={() => addLicense(link.url)} size="sm">
@@ -668,13 +934,13 @@ export default function CreateRSLPage() {
                                                             <SelectValue placeholder="Select payment type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                                            <SelectItem value="free">🆓 Free</SelectItem>
-                                                            <SelectItem value="purchase">💰 Purchase</SelectItem>
-                                                            <SelectItem value="subscription">🔄 Subscription</SelectItem>
-                                                            <SelectItem value="training">🎯 Training</SelectItem>
-                                                            <SelectItem value="crawl">🕷️ Crawl</SelectItem>
-                                                            <SelectItem value="inference">🧠 Inference</SelectItem>
-                                                            <SelectItem value="attribution">📝 Attribution</SelectItem>
+                                                            <SelectItem value="free">Free</SelectItem>
+                                                            <SelectItem value="purchase">Purchase</SelectItem>
+                                                            <SelectItem value="subscription">Subscription</SelectItem>
+                                                            <SelectItem value="training">Training</SelectItem>
+                                                            <SelectItem value="crawl">Crawl</SelectItem>
+                                                            <SelectItem value="inference">Inference</SelectItem>
+                                                            <SelectItem value="attribution">Attribution</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -689,12 +955,12 @@ export default function CreateRSLPage() {
                               </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                                       {[
-                                                        { id: "all", label: "All Usage", icon: "🌟" },
-                                                        { id: "train-ai", label: "Train AI", icon: "🤖" },
-                                                        { id: "train-genai", label: "Train GenAI", icon: "✨" },
-                                                        { id: "ai-use", label: "AI Use", icon: "🧠" },
-                                                        { id: "ai-summarize", label: "AI Summarize", icon: "📄" },
-                                                        { id: "search", label: "Search", icon: "🔍" }
+                                                        { id: "all", label: "All Usage" },
+                                                        { id: "train-ai", label: "Train AI" },
+                                                        { id: "train-genai", label: "Train GenAI" },
+                                                        { id: "ai-use", label: "AI Use" },
+                                                        { id: "ai-summarize", label: "AI Summarize" },
+                                                        { id: "search", label: "Search" }
                                                       ].map((usage) => (
                                                         <div key={usage.id} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                                                           <Checkbox 
@@ -713,8 +979,7 @@ export default function CreateRSLPage() {
                                                               });
                                                             }}
                                                           />
-                                                          <Label htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                                                            <span>{usage.icon}</span>
+                                                          <Label htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`} className="text-sm font-medium cursor-pointer">
                                                             {usage.label}
                                                           </Label>
                                 </div>
@@ -731,7 +996,6 @@ export default function CreateRSLPage() {
                                   </div>
                                 ) : (
                                   <div className="p-4 text-center text-muted-foreground">
-                                    <Icons.shield className="mx-auto h-8 w-8 mb-2 opacity-50" />
                                     <p className="text-sm">
                                       Select this URL to configure RSL licensing properties.
                                     </p>
@@ -769,7 +1033,6 @@ export default function CreateRSLPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <Icons.logo className="size-4" />
                   <span className="font-medium">{linkCount} Links</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -795,7 +1058,6 @@ export default function CreateRSLPage() {
               {showCrawledLinks && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Icons.shield className="size-4" />
                     <span className="text-sm font-medium">RSL Configuration</span>
                   </div>
                   
@@ -836,8 +1098,20 @@ export default function CreateRSLPage() {
                 </div>
               )}
               
-              <Button className="w-full bg-black text-white hover:bg-black/90" size="lg">
-                Create RSL
+              <Button 
+                className="w-full bg-black text-white hover:bg-black/90" 
+                size="lg"
+                onClick={handleCreateRsl}
+                disabled={isGeneratingXml}
+              >
+                {isGeneratingXml ? (
+                  <>
+                    <Icons.spinner className="mr-2 size-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Create RSL"
+                )}
               </Button>
             </CardContent>
           </Card>
