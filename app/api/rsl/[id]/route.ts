@@ -12,7 +12,7 @@ export const DELETE = auth(async (req, { params }) => {
   }
 
   try {
-    const { id } = params;
+    const { id } = params as { id: string };
     
     if (!id) {
       return new Response("RSL ID is required", { status: 400 });
@@ -59,7 +59,7 @@ export const GET = auth(async (req, { params }) => {
   }
 
   try {
-    const { id } = params;
+    const { id } = params as { id: string };
     
     if (!id) {
       return new Response("RSL ID is required", { status: 400 });

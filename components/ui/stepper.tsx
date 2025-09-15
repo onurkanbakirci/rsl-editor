@@ -107,9 +107,7 @@ const StepperHeader = React.forwardRef<HTMLDivElement, StepperHeaderProps>(
                     "flex size-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors",
                     {
                       "border-primary bg-primary text-primary-foreground":
-                        isActive,
-                      "border-primary bg-primary text-primary-foreground":
-                        isCompleted,
+                        isActive || isCompleted,
                       "border-muted-foreground text-muted-foreground":
                         isUpcoming,
                     }

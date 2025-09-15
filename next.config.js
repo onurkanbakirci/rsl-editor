@@ -24,7 +24,9 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client"],
+    esmExternals: true,
   },
+  transpilePackages: ["shiki"],
 };
 
 module.exports = withContentlayer(nextConfig);
