@@ -49,7 +49,7 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
               rel="noreferrer"
               className="font-medium underline underline-offset-4"
             >
-              mickasmt
+              onurkanbakirci
             </Link>
             . Hosted on{" "}
             <Link
