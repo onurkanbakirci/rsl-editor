@@ -1,10 +1,10 @@
 {
-  "name": "saas-starter",
+  "name": "rsl-editor",
   "version": "0.3.1",
   "private": true,
   "author": {
-    "name": "mickasmt",
-    "url": "https://twitter.com/mickasmt"
+    "name": "onurkanbakirci",
+    "url": "https://twitter.com/onurkanbakirci"
   },
   "scripts": {
     "dev": "next dev",
