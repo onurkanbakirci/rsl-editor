@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { constructMetadata } from "@/lib/utils";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -10,16 +11,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/shared/icons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 // RSL data structure from API
 interface RSL {
   id: string;
   websiteUrl: string;
+  xmlContent?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-function RSLCard({ rsl }: { rsl: RSL }) {
+function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL) => void; onCardClick: (rsl: RSL) => void }) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -36,8 +42,38 @@ function RSLCard({ rsl }: { rsl: RSL }) {
     }
   };
 
+  const openXmlInNewTab = () => {
+    if (rsl.xmlContent) {
+      const blob = new Blob([rsl.xmlContent], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Clean up the URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
+
+  const handleDelete = () => {
+    onDelete(rsl);
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger card click if clicking on buttons or dropdown content
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') || 
+      target.closest('[role="menu"]') ||
+      target.closest('[data-radix-popper-content-wrapper]')
+    ) {
+      return;
+    }
+    onCardClick(rsl);
+  };
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className="hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -50,25 +86,59 @@ function RSLCard({ rsl }: { rsl: RSL }) {
             </CardDescription>
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                openXmlInNewTab();
+              }}
+              disabled={!rsl.xmlContent}
+              title="View XML in new tab"
+            >
               <Icons.arrowUpRight className="size-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Icons.ellipsis className="size-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Icons.ellipsis className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCardClick(rsl);
+                  }}
+                >
+                  <Icons.edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Icons.trash className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Icons.clock className="size-4" />
-            <span>Created {formatDate(rsl.createdAt)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Icons.clock className="size-4" />
-            <span>Updated {formatDate(rsl.updatedAt)}</span>
-          </div>
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Icons.clock className="size-4" />
+          <span>Updated {formatDate(rsl.updatedAt)}</span>
         </div>
       </CardContent>
     </Card>
@@ -76,9 +146,13 @@ function RSLCard({ rsl }: { rsl: RSL }) {
 }
 
 export default function RSLPage() {
+  const router = useRouter();
   const [rsls, setRsls] = useState<RSL[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [rslToDelete, setRslToDelete] = useState<RSL | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchRSLs() {
@@ -103,6 +177,47 @@ export default function RSLPage() {
 
     fetchRSLs();
   }, []);
+
+  const openDeleteModal = (rsl: RSL) => {
+    setRslToDelete(rsl);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteRsl = async () => {
+    if (!rslToDelete) return;
+
+    setIsDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/rsl/${rslToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the deleted RSL from the state
+        setRsls(prev => prev.filter(rsl => rsl.id !== rslToDelete.id));
+        // Close delete modal
+        setShowDeleteModal(false);
+        setRslToDelete(null);
+        
+        toast.success("RSL deleted successfully!");
+      } else {
+        toast.error("Failed to delete RSL", {
+          description: "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("Network error", {
+        description: "Unable to delete RSL. Please check your connection.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCardClick = (rsl: RSL) => {
+    router.push(`/dashboard/rsl/${rsl.id}`);
+  };
 
   if (loading) {
     return (
@@ -155,35 +270,33 @@ export default function RSLPage() {
       <DashboardHeader
         heading="RSL"
         text="Create and manage your RSL configurations."
-      >
-        <Link href="/dashboard/rsl/create">
-          <Button>
-            <Icons.add className="mr-2 size-4" />
-            {rsls.length > 0 ? "Create New RSL" : "Create First RSL"}
-          </Button>
-        </Link>
-      </DashboardHeader>
-      
+      />
+
       {rsls.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {rsls.map((rsl) => (
-            <RSLCard key={rsl.id} rsl={rsl} />
+            <RSLCard 
+              key={rsl.id} 
+              rsl={rsl} 
+              onDelete={openDeleteModal}
+              onCardClick={handleCardClick}
+            />
           ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
-          <div className="w-full max-w-[400px] mb-6">
+          <div className="w-full max-w-[600px] mb-6">
             <Image
               src="/images/no-agents.webp"
               alt="No RSLs found"
-              width={400}
-              height={300}
+              width={600}
+              height={450}
               priority
               className="w-full h-auto object-contain"
             />
           </div>
           <div className="text-center space-y-4 max-w-[500px]">
-            <h3 className="text-2xl font-bold">No RSLs yet..</h3>
+            <h3 className="text-xl font-bold">No RSLs yet..</h3>
             <p className="text-muted-foreground text-base leading-relaxed">
               Create your first RSL to start automating support, generating leads, and answering customer questions.
             </p>
@@ -198,6 +311,73 @@ export default function RSLPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        showModal={showDeleteModal}
+        setShowModal={setShowDeleteModal}
+        className="max-w-md"
+      >
+        <div className="flex flex-col items-center justify-center space-y-3 border-b p-4 pt-8 sm:px-16">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+            <Icons.trash className="h-6 w-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold">Delete RSL</h3>
+          <p className="text-center text-sm text-muted-foreground">
+            <b>Warning:</b> This will permanently delete the RSL for{" "}
+            <span className="font-medium">{rslToDelete?.websiteUrl}</span>!
+          </p>
+        </div>
+
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const verification = formData.get("verification") as string;
+            
+            if (verification === "delete rsl") {
+              await handleDeleteRsl();
+            } else {
+              toast.error("Verification text doesn't match");
+            }
+          }}
+          className="flex flex-col space-y-6 bg-accent px-4 py-8 text-left sm:px-16"
+        >
+          <div>
+            <label htmlFor="verification" className="block text-sm">
+              To verify, type{" "}
+              <span className="font-semibold text-black dark:text-white">
+                delete rsl
+              </span>{" "}
+              below
+            </label>
+            <Input
+              type="text"
+              name="verification"
+              id="verification"
+              required
+              autoFocus={false}
+              autoComplete="off"
+              className="mt-1 w-full border bg-background"
+            />
+          </div>
+
+          <Button
+            variant={isDeleting ? "disable" : "destructive"}
+            disabled={isDeleting}
+            type="submit"
+          >
+            {isDeleting ? (
+              <>
+                <Icons.spinner className="mr-2 size-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Confirm delete RSL"
+            )}
+          </Button>
+        </form>
+      </Modal>
     </>
   );
 }

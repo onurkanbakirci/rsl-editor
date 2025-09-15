@@ -22,6 +22,7 @@ import {
 import ProjectSwitcher from "@/components/dashboard/project-switcher";
 import { UpgradeCard } from "@/components/dashboard/upgrade-card";
 import { Icons } from "@/components/shared/icons";
+import Image from "next/image";
 
 interface DashboardSidebarProps {
   links: SidebarNavItem[];
@@ -74,7 +75,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                 <div className="flex h-14 items-center justify-between p-4 lg:h-[60px]">
                   {/* {isSidebarExpanded ? <ProjectSwitcher /> : null} */}
                   <div className={cn("flex items-center", isSidebarExpanded ? "justify-start" : "justify-center w-full")}>
-                    <Icons.logo />
+                    <Icons.logo/>
                   </div>
                   <Button
                     variant="ghost"
@@ -203,7 +204,7 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
             <div className="flex h-screen flex-col">
               <nav className="flex flex-1 flex-col gap-y-8 p-6 text-lg font-medium">
                 <div className="flex items-center gap-3 text-lg font-semibold">
-                  <Icons.logo />
+                  <Icons.logo/>
                   <span className="font-urban text-xl font-bold">
                     RSL
                   </span>

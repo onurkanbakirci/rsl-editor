@@ -69,6 +69,7 @@ export const GET = auth(async (req) => {
       select: {
         id: true,
         websiteUrl: true,
+        xmlContent: true,
         createdAt: true,
         updatedAt: true,
       },

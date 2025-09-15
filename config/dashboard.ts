@@ -20,7 +20,7 @@ export const sidebarLinks: SidebarNavItem[] = [
       //   authorizeOnly: UserRole.USER,
       // },
       // { href: "/dashboard/charts", icon: "lineChart", title: "Charts" },
-      { href: "/dashboard/rsl", icon: "file", title: "RSLs" },
+      { href: "/dashboard/rsl", icon: "shield", title: "RSLs" },
       // {
       //   href: "/admin/orders",
       //   icon: "package",

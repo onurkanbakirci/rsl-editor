@@ -121,13 +121,14 @@ export const Icons = {
   info: Info,
   laptop: Laptop,
   lineChart: LineChart,
-  logo: ({ ...props }: LucideProps) => (
+  logo: ({ className, ...props }: LucideProps) => (
     <NextImage
-      src="/images/rsl-logo.png"
+      src="/images/rsl-logo.svg"
       alt="RSL Logo"
       width={32}
       height={32}
-      {...props}
+      className={className}
+      style={props.style}
     />
   ),
   media: Image,

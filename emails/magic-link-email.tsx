@@ -34,7 +34,7 @@ export const MagicLinkEmail = ({
     <Tailwind>
       <Body className="bg-white font-sans">
         <Container className="mx-auto py-5 pb-12">
-          <Icons.logo className="m-auto block size-10" />
+          <Icons.logo />
           <Text className="text-base">Hi {firstName},</Text>
           <Text className="text-base">
             Welcome to {siteName} ! Click the link below to{" "}

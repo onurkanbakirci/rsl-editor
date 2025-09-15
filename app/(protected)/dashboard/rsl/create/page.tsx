@@ -450,72 +450,185 @@ ${contentElements}
               <Icons.arrowLeft className="mr-2 size-4" />
               Back to Form
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleSaveRsl}
-              disabled={isSaving || !generatedXml || !url}
-            >
-              {isSaving ? (
-                <>
-                  <Icons.spinner className="size-4 mr-1 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Icons.save className="size-4 mr-1" />
-                  Save
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={() => {
-                const blob = new Blob([generatedXml], { type: 'application/xml' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'rsl-document.xml';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }}
-              disabled={isSaving}
-            >
-              <Icons.download className="size-4 mr-1" />
-              Download XML
+            <Button>
+              <Icons.help className="mr-2 size-4" />
+              Learn more
             </Button>
           </div>
         </DashboardHeader>
 
-        <div className="max-w-6xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">RSL Document</CardTitle>
-              <CardDescription>
-                This is your generated RSL XML document. You can copy it to clipboard or download it as a file.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative rounded-lg border bg-background max-h-[70vh] overflow-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedXml);
-                  }}
-                >
-                  <Icons.copy className="size-4" />
-                </Button>
-                <div className="pr-16 p-4">
-                  <HighlightedXml 
-                    code={generatedXml} 
-                    className="text-sm leading-relaxed"
-                  />
+        <div className="flex">
+          <div className="flex-1 w-[60%] pr-6">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">RSL Document</CardTitle>
+                  <CardDescription>
+                    Review your generated RSL XML document. You can copy, save, or download it from the actions panel.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative rounded-lg border bg-background max-h-[70vh] overflow-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedXml);
+                        toast.success("XML copied to clipboard");
+                      }}
+                    >
+                      <Icons.copy className="size-4" />
+                    </Button>
+                    <div className="pr-16 p-4">
+                      <HighlightedXml 
+                        code={generatedXml} 
+                        className="text-sm leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Right Sidebar - Actions */}
+          <div className="w-[40%] p-6 sticky top-0 h-screen overflow-y-auto" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
+            <Card className="border-0 shadow-none bg-transparent">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icons.shield className="size-5" />
+                  Document Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Document Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Website:</span>
+                    <span className="font-medium truncate ml-2" title={`${protocol}://${url}`}>
+                      {`${protocol}://${url}`}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Document size:</span>
+                    <span className="font-medium">
+                      {(new Blob([generatedXml]).size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Content URLs:</span>
+                    <span className="font-medium">
+                      {crawledLinks.filter(link => link.selected).length}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Total licenses:</span>
+                    <span className="font-medium">
+                      {crawledLinks
+                        .filter(link => link.selected && link.formData?.rsl)
+                        .reduce((total, link) => 
+                          total + (link.formData?.rsl?.licenses?.length || 0), 0
+                        )}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Primary Actions */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="text-sm font-medium text-muted-foreground">Primary Actions</h4>
+                  
+                  <Button
+                    onClick={handleSaveRsl}
+                    disabled={isSaving || !generatedXml || !url}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    size="lg"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Icons.spinner className="size-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Icons.save className="size-4 mr-2" />
+                        Save RSL Document
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      const blob = new Blob([generatedXml], { type: 'application/xml' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'rsl-document.xml';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success("XML file downloaded");
+                    }}
+                    disabled={isSaving}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Icons.download className="size-4 mr-2" />
+                    Download XML File
+                  </Button>
+                </div>
+
+                {/* Secondary Actions */}
+                <div className="space-y-3 pt-4 border-t">
+                  <h4 className="text-sm font-medium text-muted-foreground">Additional Options</h4>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedXml);
+                      toast.success("XML copied to clipboard");
+                    }}
+                  >
+                    <Icons.copy className="size-4 mr-2" />
+                    Copy to Clipboard
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const blob = new Blob([generatedXml], { type: 'application/xml' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    <Icons.arrowUpRight className="size-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-muted-foreground">Document ready</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your RSL document has been generated successfully and is ready to save or download.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </>
     );
