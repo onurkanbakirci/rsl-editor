@@ -458,7 +458,7 @@ ${contentElements}
         </DashboardHeader>
 
         <div className="flex">
-          <div className="w-3/5 flex-1 pr-6">
+          <div className="w-3/5 flex-1 pr-6 min-w-0">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -504,9 +504,9 @@ ${contentElements}
               <CardContent className="space-y-6">
                 {/* Document Info */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Website:</span>
-                    <span className="ml-2 truncate font-medium" title={`${protocol}://${url}`}>
+                    <span className="ml-2 truncate font-medium max-w-[200px]" title={`${protocol}://${url}`}>
                       {`${protocol}://${url}`}
                     </span>
                   </div>
@@ -656,7 +656,7 @@ ${contentElements}
       </DashboardHeader>
 
       <div className="flex">
-        <div className="w-3/5 flex-1 pr-6">
+        <div className="w-3/5 flex-1 pr-6 min-w-0">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -846,10 +846,10 @@ ${contentElements}
                         </div>
                       </div>
 
-                      {/* All discovered URLs */}
+                                        {/* All discovered URLs */}
                       <div className="space-y-3">
                         {crawledLinks.map((link) => (
-                          <div key={link.id} className="rounded-lg border">
+                          <div key={link.id} className="overflow-hidden rounded-lg border">
                             {/* URL Header */}
                             <div 
                               className="flex cursor-pointer items-center justify-between p-3 transition-colors hover:bg-muted/50"
@@ -862,7 +862,7 @@ ${contentElements}
                             onClick={(e) => e.stopPropagation()}
                           />
                                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                                  <span className="max-w-full truncate text-sm">{link.url}</span>
+                                  <span className="truncate text-sm max-w-full">{link.url}</span>
                                   <Badge variant="secondary" className="shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700">
                                 New
                               </Badge>

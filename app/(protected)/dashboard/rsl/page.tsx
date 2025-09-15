@@ -270,7 +270,16 @@ export default function RSLPage() {
       <DashboardHeader
         heading="RSL"
         text="Create and manage your RSL configurations."
-      />
+      >
+        {rsls.length > 0 && (
+          <Link href="/dashboard/rsl/create">
+            <Button className="bg-black text-white hover:bg-black/90">
+              <Icons.add className="mr-2 size-4" />
+              New RSL
+            </Button>
+          </Link>
+        )}
+      </DashboardHeader>
 
       {rsls.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">

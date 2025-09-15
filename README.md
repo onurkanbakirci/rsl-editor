@@ -25,7 +25,6 @@
 
 <p align="center">
   <a href="#introduction"><strong>Introduction</strong></a> ·
-  <a href="#features"><strong>Features</strong></a> ·
   <a href="#usage"><strong>Usage</strong></a> ·
   <a href="#contributing"><strong>Contributing</strong></a> ·
   <a href="#license"><strong>License</strong></a>
@@ -47,31 +46,6 @@ RSL is an open standard designed to address the challenges of content licensing 
 - **Flexible Permissions**: Support for various licensing models from open to restrictive
 - **Clear Rights Management**: Define what can and cannot be done with your content
 
-## Features
-
-### 🚀 Core Features
-
-- **Visual RSL Editor**: Intuitive interface for creating and editing RSL licenses
-- **Website Crawling**: Automatically discover and analyze web content for licensing
-- **Multi-Page Support**: Manage licenses for multiple pages and content types
-- **License Templates**: Pre-built templates for common licensing scenarios
-- **XML Generation**: Generate valid RSL XML from visual forms
-- **Real-time Preview**: See your RSL markup as you build it
-
-### 📊 Content Management
-
-- **Dashboard**: Overview of all your RSL configurations
-- **Project Organization**: Group related content and licenses
-- **Version Control**: Track changes and updates to your licensing
-- **Export/Import**: Share and backup your RSL configurations
-
-### 🔧 Technical Features
-
-- **User Authentication**: Secure login with NextAuth.js
-- **Database Storage**: Persistent storage with Prisma and PostgreSQL
-- **Modern UI**: Beautiful interface built with Tailwind CSS and Shadcn/ui
-- **Responsive Design**: Works perfectly on desktop and mobile devices
-- **API Access**: RESTful API for programmatic integration
 
 
 ## Usage
