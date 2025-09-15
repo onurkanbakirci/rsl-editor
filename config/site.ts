@@ -8,7 +8,7 @@ export const siteConfig: SiteConfig = {
   description:
     "The open content licensing standard for the AI-first Internet. Really Simple Licensing makes it easy to manage content rights and permissions.",
   url: site_url,
-  ogImage: `${site_url}/_static/og.jpg`,
+  ogImage: `${site_url}/_static/og.png`,
   links: {
     twitter: "https://twitter.com/onurkanbakirci",
     github: "https://github.com/onurkanbakirci/rsl-editor",

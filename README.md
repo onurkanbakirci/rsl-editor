@@ -1,5 +1,5 @@
 <a href="https://github.com/onurkanbakirci/rsl-editor">
-  <img alt="RSL Editor" src="public/_static/og.jpg">
+  <img alt="RSL Editor" src="public/_static/og.png">
   <h1 align="center">RSL Editor</h1>
 </a>
 
