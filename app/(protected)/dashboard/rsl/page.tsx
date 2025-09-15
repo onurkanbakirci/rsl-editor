@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { constructMetadata } from "@/lib/utils";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { EmptyPlaceholder } from "@/components/shared/empty-placeholder";
@@ -109,19 +110,29 @@ export default function RSLPage() {
           ))}
         </div>
       ) : (
-        <EmptyPlaceholder>
-          <EmptyPlaceholder.Icon name="logo" />
-          <EmptyPlaceholder.Title>No RSLs found</EmptyPlaceholder.Title>
-          <EmptyPlaceholder.Description>
-            You haven't created any RSLs yet. Get started by creating your first RSL configuration.
-          </EmptyPlaceholder.Description>
-          <Link href="/dashboard/rsl/create">
-            <Button>
-              <Icons.add className="mr-2 size-4" />
-              Create New RSL
-            </Button>
-          </Link>
-        </EmptyPlaceholder>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center text-center max-w-[700px]">
+            <div className="mb-8 w-full">
+              <Image
+                src="/images/no-agents.webp"
+                alt="No RSLs found"
+                width={1200}
+                height={1200}
+                className="mx-auto w-full max-w-[600px] h-auto"
+              />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">No RSLs yet..</h3>
+            <p className="text-muted-foreground mb-6 text-center">
+              Create your first RSL to start automating support, generating leads, and answering customer questions.
+            </p>
+            <Link href="/dashboard/rsl/create">
+              <Button>
+                <Icons.add className="mr-2 size-4" />
+                New RSL
+              </Button>
+            </Link>
+          </div>
+        </div>
       )}
     </>
   );
