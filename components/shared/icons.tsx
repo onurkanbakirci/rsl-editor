@@ -14,6 +14,7 @@ import {
   CreditCard,
   Download,
   Edit,
+  Eye,
   File,
   FileText,
   HelpCircle,
@@ -64,6 +65,7 @@ export const Icons = {
   download: Download,
   edit: Edit,
   ellipsis: MoreVertical,
+  eye: Eye,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"

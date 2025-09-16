@@ -122,6 +122,7 @@ export default function EditRSLPage() {
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
   const [showXmlPreview, setShowXmlPreview] = useState(false);
+  const [showExistingXmlView, setShowExistingXmlView] = useState(false);
   const [generatedXml, setGeneratedXml] = useState("");
   const [isGeneratingXml, setIsGeneratingXml] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -570,6 +571,188 @@ export default function EditRSLPage() {
               <Icons.arrowRight className="mr-2 size-4" />
               Try Again
             </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Existing XML View state
+  if (showExistingXmlView && rsl?.xmlContent) {
+    return (
+      <>
+        <DashboardHeader
+          heading="Current RSL Document"
+          text="View the existing RSL XML document that is currently saved"
+        >
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowExistingXmlView(false)}>
+              <Icons.arrowLeft className="mr-2 size-4" />
+              Back to Form
+            </Button>
+          </div>
+        </DashboardHeader>
+
+        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+          <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">
+                    Current RSL Document
+                  </CardTitle>
+                  <CardDescription>
+                    This is the existing RSL XML document that is currently saved in the database.
+                    You can copy it or compare it with your updated version.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                      onClick={() => {
+                        navigator.clipboard.writeText(rsl.xmlContent);
+                        toast.success("XML copied to clipboard");
+                      }}
+                    >
+                      <Icons.copy className="size-4" />
+                    </Button>
+                    <div className="p-4 pr-16 overflow-x-auto">
+                      <HighlightedXml
+                        code={rsl.xmlContent}
+                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Right Sidebar - Actions */}
+          <div
+            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
+          >
+            <Card className="border-0 bg-transparent shadow-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icons.shield className="size-5" />
+                  Document Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Document Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Website:</span>
+                    <span
+                      className="ml-2 max-w-[200px] truncate font-medium"
+                      title={rsl.websiteUrl}
+                    >
+                      {rsl.websiteUrl}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Document size:
+                    </span>
+                    <span className="font-medium">
+                      {(new Blob([rsl.xmlContent]).size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Created:</span>
+                    <span className="font-medium">
+                      {new Date(rsl.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Last updated:</span>
+                    <span className="font-medium">
+                      {new Date(rsl.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Actions
+                  </h4>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigator.clipboard.writeText(rsl.xmlContent);
+                      toast.success("XML copied to clipboard");
+                    }}
+                  >
+                    <Icons.copy className="mr-2 size-4" />
+                    Copy to Clipboard
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const blob = new Blob([rsl.xmlContent], {
+                        type: "application/xml",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "current-rsl-document.xml";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success("XML file downloaded");
+                    }}
+                  >
+                    <Icons.download className="mr-2 size-4" />
+                    Download XML File
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const blob = new Blob([rsl.xmlContent], {
+                        type: "application/xml",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, "_blank");
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    <Icons.arrowUpRight className="mr-2 size-4" />
+                    Open in New Tab
+                  </Button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="size-2 rounded-full bg-blue-500"></div>
+                    <span className="text-muted-foreground">
+                      Current version
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This is the RSL document currently saved in your database.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </>
@@ -1579,21 +1762,35 @@ export default function EditRSLPage() {
                 </div>
               )}
 
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleUpdateRsl}
-                disabled={isGeneratingXml}
-              >
-                {isGeneratingXml ? (
-                  <>
-                    <Icons.spinner className="mr-2 size-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update RSL"
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleUpdateRsl}
+                  disabled={isGeneratingXml}
+                >
+                  {isGeneratingXml ? (
+                    <>
+                      <Icons.spinner className="mr-2 size-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update RSL"
+                  )}
+                </Button>
+                
+                {rsl?.xmlContent && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => setShowExistingXmlView(true)}
+                  >
+                    <Icons.eye className="mr-2 size-4" />
+                    View Current XML
+                  </Button>
                 )}
-              </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
