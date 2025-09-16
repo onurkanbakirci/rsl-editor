@@ -24,7 +24,7 @@ export default function RegisterPage() {
       >
         Login
       </Link>
-      <div className="hidden h-full bg-muted lg:block relative">
+      <div className="relative hidden h-full bg-muted lg:block">
         <Image
           src="/_static/illustrations/work-from-home.jpg"
           alt="Register illustration"
