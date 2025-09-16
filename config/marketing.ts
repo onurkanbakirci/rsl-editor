@@ -12,7 +12,7 @@ export const marketingConfig: MarketingConfig = {
     }, */
     {
       title: "Documentation",
-      href: "/docs",
+      href: "https://rslstandard.org/rsl",
     },
     {
       title: "Blog",
