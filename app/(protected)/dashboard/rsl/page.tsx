@@ -273,7 +273,7 @@ export default function RSLPage() {
       >
         {rsls.length > 0 && (
           <Link href="/dashboard/rsl/create">
-            <Button className="bg-black text-white hover:bg-black/90">
+            <Button>
               <Icons.add className="mr-2 size-4" />
               New RSL
             </Button>
@@ -311,7 +311,7 @@ export default function RSLPage() {
             </p>
             <div className="pt-2">
               <Link href="/dashboard/rsl/create">
-                <Button size="lg" className="bg-black text-white hover:bg-black/90">
+                <Button size="lg">
                   <Icons.add className="mr-2 size-4" />
                   New RSL
                 </Button>
@@ -328,8 +328,8 @@ export default function RSLPage() {
         className="max-w-md"
       >
         <div className="flex flex-col items-center justify-center space-y-3 border-b p-4 pt-8 sm:px-16">
-          <div className="flex size-10 items-center justify-center rounded-full bg-red-100">
-            <Icons.trash className="size-6 text-red-600" />
+          <div className="flex size-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+            <Icons.trash className="size-6 text-red-600 dark:text-red-400" />
           </div>
           <h3 className="text-lg font-semibold">Delete RSL</h3>
           <p className="text-center text-sm text-muted-foreground">

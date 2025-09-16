@@ -1,20 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { DashboardHeader } from "@/components/dashboard/header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Icons } from "@/components/shared/icons";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { HighlightedXml } from "@/components/shared/highlighted-xml";
+
+import { cn } from "@/lib/utils";
 import {
   generateRslXml,
   validateRslData,
@@ -26,6 +16,68 @@ import {
   type RslLicense,
   type EditableContent,
 } from "@/lib/rsl-generator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { DashboardHeader } from "@/components/dashboard/header";
+import { HighlightedXml } from "@/components/shared/highlighted-xml";
+import { Icons } from "@/components/shared/icons";
+
+// Types for crawled links with RSL data
+interface CrawledLink {
+  id: string;
+  url: string;
+  status: "crawling" | "completed" | "failed";
+  isNew?: boolean;
+  selected: boolean;
+  formData?: {
+    rsl?: {
+      licenseServer?: string;
+      encrypted?: boolean;
+      lastModified?: string;
+      licenses?: RslLicense[];
+      metadata?: {
+        schemaUrl?: string;
+        copyrightType?: "person" | "organization";
+        contactEmail?: string;
+        contactUrl?: string;
+        termsUrl?: string;
+      };
+    };
+  };
+}
 
 interface RSL {
   id: string;
@@ -35,22 +87,46 @@ interface RSL {
   updatedAt: string;
 }
 
-// EditableContent interface moved to @/lib/rsl-generator.ts
-
 export default function EditRSLPage() {
   const params = useParams();
-  const router = useRouter();
+  const rslId = params.id as string;
+  
+  // RSL data
   const [rsl, setRsl] = useState<RSL | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [contentList, setContentList] = useState<EditableContent[]>([]);
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [activeTab, setActiveTab] = useState("editor");
 
-  const rslId = params.id as string;
+  // Initialize state for edit mode
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
+  const [crawlSummary, setCrawlSummary] = useState<{
+    totalPages: number;
+    totalSize: number; 
+    crawlTime: number;
+    baseUrl: string;
+    message: string;
+  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("default");
+  
+  // Initialize URL and protocol for edit mode
+  const [url, setUrl] = useState("");
+  const [protocol, setProtocol] = useState("https");
+  
+  const [showPlanLimitModal, setShowPlanLimitModal] = useState(false);
+  const [isLinksExpanded, setIsLinksExpanded] = useState(false);
+  const [showCrawledLinks, setShowCrawledLinks] = useState(false);
+  const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
+  
+  // URL expansion and license tab state for edit mode
+  const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
+  const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
+  const [showXmlPreview, setShowXmlPreview] = useState(false);
+  const [generatedXml, setGeneratedXml] = useState("");
+  const [isGeneratingXml, setIsGeneratingXml] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch RSL data and initialize edit state
+  // Load existing RSL data
   useEffect(() => {
     const fetchRslData = async () => {
       if (!rslId) return;
@@ -62,9 +138,47 @@ export default function EditRSLPage() {
           const result = await response.json();
           if (result.success && result.data) {
             setRsl(result.data);
-            setWebsiteUrl(result.data.websiteUrl);
+            
+            // Parse the website URL
+            const websiteUrl = result.data.websiteUrl;
+            try {
+              const urlObj = new URL(websiteUrl);
+              setProtocol(urlObj.protocol.replace(':', ''));
+              setUrl(urlObj.hostname + urlObj.pathname + urlObj.search);
+            } catch {
+              setUrl(websiteUrl);
+            }
+            
+            // Parse existing RSL data into crawled links format
             const editableContent = parseRslXmlToEditableContent(result.data.xmlContent, result.data.websiteUrl);
-            setContentList(editableContent);
+            const existingLinks: CrawledLink[] = editableContent.map((content, index) => ({
+              id: `existing-${index}`,
+              url: content.url,
+              status: "completed" as const,
+              selected: true,
+              formData: {
+                rsl: {
+                  licenseServer: content.licenseServer,
+                  encrypted: content.encrypted,
+                  lastModified: content.lastModified,
+                  licenses: content.licenses,
+                  metadata: content.metadata,
+                },
+              },
+            }));
+            
+            setCrawledLinks(existingLinks);
+            setShowCrawledLinks(true);
+            
+            // Set active license tabs
+            const initialTabs: Record<string, string> = {};
+            existingLinks.forEach(link => {
+              if (link.formData?.rsl?.licenses && link.formData.rsl.licenses.length > 0) {
+                initialTabs[link.url] = link.formData.rsl.licenses[0].id;
+              }
+            });
+            setActiveLicenseTab(initialTabs);
+            
           } else {
             setError("Failed to load RSL data");
             toast.error("Failed to load RSL", {
@@ -96,201 +210,581 @@ export default function EditRSLPage() {
     fetchRslData();
   }, [rslId]);
 
-  // Save RSL changes
-  const handleSave = async () => {
-    if (!rsl || saving) return;
+  const handleFetchLinks = async () => {
+    if (!url) return;
 
-    setSaving(true);
+    setIsCrawling(true);
     try {
-      // Convert editable content to RSL format
-      const rslContents: RslContent[] = contentList.map(content => ({
-        url: content.url,
-        rsl: {
-          licenseServer: content.licenseServer,
-          encrypted: content.encrypted,
-          lastModified: content.lastModified,
-          licenses: content.licenses,
-          metadata: content.metadata
-        }
-      }));
+      // Construct the full URL
+      const fullUrl = `${protocol}://${url}`;
+      
+      // Determine crawling method based on current tab
+      const activeTab = document.querySelector('[data-state="active"]')?.getAttribute('value') || 'crawl';
+      
+      // Prepare crawl options for full website crawl
+      const maxPages = parseInt((document.getElementById('max-pages') as HTMLInputElement)?.value || '100');
+      const maxDepth = parseInt((document.getElementById('depth') as HTMLInputElement)?.value || '3');
+      const excludePatterns = (document.getElementById('exclude') as HTMLInputElement)?.value
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0) || [];
 
-      // Validate RSL data
-      const validation = validateRslData(rslContents);
-      if (!validation.isValid) {
-        toast.error("Invalid RSL configuration", {
-          description: validation.errors[0] || "Please check your configuration.",
-        });
-        return;
-      }
-
-      // Generate XML
-      const xmlContent = generateRslXml(rslContents);
-
-      // Save to API
-      const response = await fetch(`/api/rsl/${rslId}`, {
-        method: 'PUT',
+      // Call the crawl API - server handles everything
+      const response = await fetch('/api/crawl', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          websiteUrl,
-          xmlContent,
+          url: fullUrl,
+          crawlType: activeTab,
+          options: {
+            maxPages,
+            maxDepth,
+            excludePatterns,
+          },
+        }),
+      });
+
+      const apiResult = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(apiResult.error || 'API request failed');
+      }
+
+      if (apiResult.success) {
+        // Edit mode - merge new links with existing ones
+        const newLinks = apiResult.links.map((link: any) => ({
+          ...link,
+          isNew: true, // Mark new links
+        }));
+        
+        // Combine existing and new links, avoiding duplicates
+        const existingUrls = new Set(crawledLinks.map(link => link.url));
+        const uniqueNewLinks = newLinks.filter((link: CrawledLink) => !existingUrls.has(link.url));
+        
+        setCrawledLinks(prev => [...prev, ...uniqueNewLinks]);
+        setCrawlSummary(apiResult.summary);
+        
+        if (uniqueNewLinks.length > 0) {
+          toast.success(`Added ${uniqueNewLinks.length} new links to your RSL`, {
+            description: apiResult.summary.message,
+          });
+        } else {
+          toast.info("No new links found", {
+            description: "All discovered links are already in your RSL.",
+          });
+        }
+        
+        setShowCrawledLinks(true);
+      } else {
+        toast.error('Crawling failed', {
+          description: apiResult.errors.join(', '),
+        });
+      }
+    } catch (error) {
+      console.error('Crawling error:', error);
+      toast.error('Crawling failed', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+    } finally {
+      setIsCrawling(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    const allSelected = crawledLinks.every((link) => link.selected);
+    setCrawledLinks((prev) =>
+      prev.map((link) => ({
+        ...link,
+        selected: !allSelected,
+      })),
+    );
+  };
+
+  const toggleLinkSelection = (linkUrl: string) => {
+    setCrawledLinks((prev) =>
+      prev.map((link) => {
+        if (link.url === linkUrl) {
+          return { ...link, selected: !link.selected };
+        }
+        return link;
+      }),
+    );
+  };
+
+  const updatePageFormData = (
+    pageUrl: string,
+    formData: Partial<CrawledLink["formData"]>,
+  ) => {
+    setCrawledLinks((prev) =>
+      prev.map((link) =>
+        link.url === pageUrl
+          ? {
+              ...link,
+              formData: { ...link.formData, ...formData },
+            }
+          : link,
+      ),
+    );
+  };
+
+  const addLicense = (pageUrl: string) => {
+    const currentLicenses = getCurrentLicenses(pageUrl);
+    const newLicense = createNewLicense(currentLicenses.length);
+
+    const currentRsl = getCurrentRslData(pageUrl);
+
+    updatePageFormData(pageUrl, {
+      rsl: {
+        ...currentRsl,
+        licenses: [...currentLicenses, newLicense],
+      },
+    });
+
+    // Set the new license as active
+    setActiveLicenseTab((prev) => ({ ...prev, [pageUrl]: newLicense.id }));
+  };
+
+  const removeLicense = (pageUrl: string, licenseId: string) => {
+    const currentRsl = getCurrentRslData(pageUrl);
+    const currentLicenses = currentRsl?.licenses || [];
+    const filteredLicenses = currentLicenses.filter((l) => l.id !== licenseId);
+
+    updatePageFormData(pageUrl, {
+      rsl: {
+        ...currentRsl,
+        licenses: filteredLicenses,
+      },
+    });
+
+    // If we removed the active license, switch to the first one
+    if (
+      activeLicenseTab[pageUrl] === licenseId &&
+      filteredLicenses.length > 0
+    ) {
+      setActiveLicenseTab((prev) => ({
+        ...prev,
+        [pageUrl]: filteredLicenses[0].id,
+      }));
+    }
+  };
+
+  const getCurrentRslData = (pageUrl: string) => {
+    return crawledLinks.find((l) => l.url === pageUrl)?.formData?.rsl;
+  };
+
+  const getCurrentLicenses = (pageUrl: string) => {
+    return getCurrentRslData(pageUrl)?.licenses || [];
+  };
+
+  const getCurrentLicense = (pageUrl: string) => {
+    const licenses = getCurrentLicenses(pageUrl);
+    const activeId = activeLicenseTab[pageUrl];
+    return licenses.find((l) => l.id === activeId) || licenses[0];
+  };
+
+  const updateCurrentLicense = (pageUrl: string, licenseData: any) => {
+    const currentRsl = getCurrentRslData(pageUrl);
+    const currentLicenses = getCurrentLicenses(pageUrl);
+    const activeId = activeLicenseTab[pageUrl] || currentLicenses[0]?.id;
+
+    const updatedLicenses = currentLicenses.map((license) =>
+      license.id === activeId ? { ...license, ...licenseData } : license,
+    );
+
+    updatePageFormData(pageUrl, {
+      rsl: {
+        ...currentRsl,
+        licenses: updatedLicenses,
+      },
+    });
+  };
+
+  const generateRslXmlFromLinks = () => {
+    const selectedLinks = crawledLinks.filter(
+      (link) => link.selected && link.formData?.rsl,
+    );
+
+    const rslContents: RslContent[] = selectedLinks.map(link => ({
+      url: link.url,
+      rsl: link.formData!.rsl!,
+    }));
+
+    // Validate the data before generation
+    const validation = validateRslData(rslContents);
+    if (!validation.isValid) {
+      console.warn('RSL validation warnings:', validation.errors);
+      // Continue anyway, as some warnings might be acceptable
+    }
+
+    return generateRslXml(rslContents);
+  };
+
+  const handleUpdateRsl = async () => {
+    setIsGeneratingXml(true);
+
+    // Simulate loading time for better UX
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const xml = generateRslXmlFromLinks();
+    setGeneratedXml(xml);
+    setIsGeneratingXml(false);
+    setShowXmlPreview(true);
+  };
+
+  const handleSaveRsl = async () => {
+    if (!generatedXml) {
+      toast.error("No RSL document to save", {
+        description:
+          "Please generate an RSL document first by clicking 'Update RSL'.",
+      });
+      return;
+    }
+
+    if (!url) {
+      toast.error("Missing website URL", {
+        description: "Please enter a website URL before saving.",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // PUT for updating existing documents (edit mode)
+      const response = await fetch(`/api/rsl/${rslId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          websiteUrl: `${protocol}://${url}`,
+          xmlContent: generatedXml,
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          toast.success("RSL updated successfully", {
-            description: "Your changes have been saved.",
+          toast.success("RSL updated successfully!", {
+            description: `Your RSL document for ${protocol}://${url} has been updated.`,
           });
-          // Update local state with new data
-          setRsl(prev => prev ? { ...prev, websiteUrl, xmlContent, updatedAt: new Date().toISOString() } : null);
+          // Update local state
+          setRsl(prev => prev ? { 
+            ...prev, 
+            websiteUrl: `${protocol}://${url}`, 
+            xmlContent: generatedXml,
+            updatedAt: new Date().toISOString()
+          } : null);
         } else {
-          toast.error("Failed to save RSL", {
-            description: "There was an error saving your changes.",
+          toast.error("Failed to update RSL", {
+            description: "There was an error updating your RSL document. Please try again.",
           });
         }
       } else {
-        toast.error("Failed to save RSL", {
-          description: "Server error occurred while saving.",
+        toast.error("Something went wrong", {
+          description: `HTTP error ${response.status}. Please try again.`,
         });
       }
     } catch (error) {
-      console.error("Error saving RSL:", error);
+      console.error("Error updating RSL:", error);
       toast.error("Network error", {
-        description: "Unable to save changes. Please try again.",
+        description:
+          "Unable to connect to the server. Please check your connection and try again.",
       });
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
-  // Helper functions for editing content
-  const updateContent = (index: number, updates: Partial<EditableContent>) => {
-    setContentList(prev => prev.map((content, i) => 
-      i === index ? { ...content, ...updates } : content
-    ));
-  };
-
-  const addLicense = (contentIndex: number) => {
-    setContentList(prev => prev.map((content, i) => 
-      i === contentIndex 
-        ? { ...content, licenses: [...content.licenses, createNewLicense(content.licenses.length)] }
-        : content
-    ));
-  };
-
-  const updateLicense = (contentIndex: number, licenseIndex: number, updates: Partial<RslLicense>) => {
-    setContentList(prev => prev.map((content, i) => 
-      i === contentIndex 
-        ? { 
-            ...content, 
-            licenses: content.licenses.map((license, j) => 
-              j === licenseIndex ? { ...license, ...updates } : license
-            )
-          }
-        : content
-    ));
-  };
-
-  const removeLicense = (contentIndex: number, licenseIndex: number) => {
-    setContentList(prev => prev.map((content, i) => 
-      i === contentIndex 
-        ? { 
-            ...content, 
-            licenses: content.licenses.filter((_, j) => j !== licenseIndex)
-          }
-        : content
-    ));
-  };
-
-  // Generate preview XML
-  const generatePreviewXml = () => {
-    const rslContents: RslContent[] = contentList.map(content => ({
-      url: content.url,
-      rsl: {
-        licenseServer: content.licenseServer,
-        encrypted: content.encrypted,
-        lastModified: content.lastModified,
-        licenses: content.licenses,
-        metadata: content.metadata
+  const toggleUrlExpanded = (url: string) => {
+    setExpandedUrls((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(url)) {
+        newSet.delete(url);
+      } else {
+        newSet.add(url);
       }
-    }));
-    return generateRslXml(rslContents);
+      return newSet;
+    });
   };
 
+  const filteredLinks = crawledLinks.filter((link) =>
+    link.url.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // Loading state
   if (loading) {
     return (
       <>
         <DashboardHeader
           heading="Edit RSL"
           text="Loading your RSL configuration for editing."
+        />
+        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+          <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+                    <div className="h-10 w-full animate-pulse rounded bg-muted" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          <div className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20">
+            <Card className="border-0 bg-transparent shadow-none">
+              <CardHeader>
+                <div className="h-6 w-20 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Error state
+  if (error || !rsl) {
+    return (
+      <>
+        <DashboardHeader
+          heading="Edit RSL"
+          text="Unable to load RSL for editing."
+        />
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-center">
+            <Icons.warning className="mx-auto mb-4 size-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-semibold">Error loading RSL</h3>
+            <p className="mb-4 text-muted-foreground">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              <Icons.arrowRight className="mr-2 size-4" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // XML Preview state
+  if (showXmlPreview) {
+    return (
+      <>
+        <DashboardHeader
+          heading="RSL Document Preview"
+          text="Updated RSL XML document based on your configuration"
         >
           <div className="flex gap-2">
-            <Button variant="outline" disabled>
+            <Button variant="outline" onClick={() => setShowXmlPreview(false)}>
               <Icons.arrowLeft className="mr-2 size-4" />
-              Back
+              Back to Form
             </Button>
           </div>
         </DashboardHeader>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-64" />
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-4">
-                  <Skeleton className="h-6 w-24" />
-                  <div className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="rounded-lg border p-4">
-                        <div className="flex items-center justify-between">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-4 w-16" />
-                        </div>
-                      </div>
-                    ))}
+        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+          <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">
+                    RSL Document
+                  </CardTitle>
+                  <CardDescription>
+                    Review your updated RSL XML document. You can copy, save,
+                    or download it from the actions panel.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedXml);
+                        toast.success("XML copied to clipboard");
+                      }}
+                    >
+                      <Icons.copy className="size-4" />
+                    </Button>
+                    <div className="p-4 pr-16 overflow-x-auto">
+                      <HighlightedXml
+                        code={generatedXml}
+                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
+                      />
+                    </div>
                   </div>
-                </div>
-                <Skeleton className="ml-auto h-10 w-32" />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <Card>
+          {/* Right Sidebar - Actions */}
+          <div
+            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
+          >
+            <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
-                <Skeleton className="h-6 w-20" />
+                <CardTitle className="flex items-center gap-2">
+                  <Icons.shield className="size-5" />
+                  Document Actions
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-24" />
+              <CardContent className="space-y-6">
+                {/* Document Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Website:</span>
+                    <span
+                      className="ml-2 max-w-[200px] truncate font-medium"
+                      title={crawlSummary?.baseUrl || `${protocol}://${url}`}
+                    >
+                      {crawlSummary?.baseUrl || `${protocol}://${url}`}
+                    </span>
                   </div>
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-5 w-24" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-4/5" />
-                  <Skeleton className="h-3 w-3/4" />
-                  <Skeleton className="h-3 w-full" />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Document size:
+                    </span>
+                    <span className="font-medium">
+                      {(new Blob([generatedXml]).size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Content URLs:</span>
+                    <span className="font-medium">
+                      {crawledLinks.filter((link) => link.selected).length}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Total licenses:
+                    </span>
+                    <span className="font-medium">
+                      {crawledLinks
+                        .filter((link) => link.selected && link.formData?.rsl)
+                        .reduce(
+                          (total, link) =>
+                            total + (link.formData?.rsl?.licenses?.length || 0),
+                          0,
+                        )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary Actions */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Primary Actions
+                  </h4>
+
+                  <Button
+                    onClick={handleSaveRsl}
+                    disabled={isSaving || !generatedXml || !url}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Icons.spinner className="mr-2 size-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Icons.save className="mr-2 size-4" />
+                        Save RSL Document
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const blob = new Blob([generatedXml], {
+                        type: "application/xml",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "rsl-document.xml";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success("XML file downloaded");
+                    }}
+                    disabled={isSaving}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Icons.download className="mr-2 size-4" />
+                    Download XML File
+                  </Button>
+                </div>
+
+                {/* Secondary Actions */}
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Additional Options
+                  </h4>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedXml);
+                      toast.success("XML copied to clipboard");
+                    }}
+                  >
+                    <Icons.copy className="mr-2 size-4" />
+                    Copy to Clipboard
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const blob = new Blob([generatedXml], {
+                        type: "application/xml",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, "_blank");
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    <Icons.arrowUpRight className="mr-2 size-4" />
+                    Open in New Tab
+                  </Button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="size-2 rounded-full bg-green-500"></div>
+                    <span className="text-muted-foreground">
+                      Document ready
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Your RSL document has been updated successfully and is
+                    ready to save or download.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -300,400 +794,836 @@ export default function EditRSLPage() {
     );
   }
 
-  if (error || !rsl) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <h3 className="mb-2 text-lg font-semibold">Error loading RSL</h3>
-          <p className="mb-4 text-muted-foreground">{error}</p>
-          <button
-            onClick={() => router.push('/dashboard/rsl')}
-            className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-black/90"
-          >
-            Back to RSL List
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // Main form state (same as create page but for editing)
   return (
     <>
       <DashboardHeader
         heading="Edit RSL"
-        text="Modify your RSL configuration and licensing terms."
-      >
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push(`/dashboard/rsl/${rslId}`)}
-          >
-            <Icons.arrowLeft className="mr-2 size-4" />
-            Back to View
-          </Button>
-          <Button 
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <Icons.spinner className="mr-2 size-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Icons.save className="mr-2 size-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </DashboardHeader>
+        text="Refetch links or modify existing RSL configuration and licensing terms."
+      />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="editor">Editor</TabsTrigger>
-              <TabsTrigger value="preview">XML Preview</TabsTrigger>
-            </TabsList>
+      <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+        <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Refetch links
+                  <Icons.chevronUp className="size-4" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Tabs defaultValue="crawl" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="crawl">Crawl links</TabsTrigger>
+                    <TabsTrigger value="sitemap">Sitemap</TabsTrigger>
+                    <TabsTrigger value="individual">
+                      Individual link
+                    </TabsTrigger>
+                  </TabsList>
 
-            <TabsContent value="editor" className="space-y-6">
+                  <TabsContent value="crawl" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="url">URL</Label>
+                      <div className="flex">
+                        <Select value={protocol} onValueChange={setProtocol}>
+                          <SelectTrigger className="w-32 rounded-r-none border-r-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="https">https://</SelectItem>
+                            <SelectItem value="http">http://</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          id="url"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          placeholder="www.example.com"
+                          className="rounded-l-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <div className="flex items-start gap-2">
+                        <Icons.help className="mt-0.5 size-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Refetching will discover new links and add them to your existing RSL configuration. Existing links will be preserved.
+                        </p>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="sitemap" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sitemap-url">Sitemap URL</Label>
+                      <div className="flex">
+                        <Select value={protocol} onValueChange={setProtocol}>
+                          <SelectTrigger className="w-32 rounded-r-none border-r-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="https">https://</SelectItem>
+                            <SelectItem value="http">http://</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          id="sitemap-url"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          placeholder="www.example.com/sitemap.xml"
+                          className="rounded-l-none"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="individual" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="individual-url">Individual URL</Label>
+                      <div className="flex">
+                        <Select value={protocol} onValueChange={setProtocol}>
+                          <SelectTrigger className="w-32 rounded-r-none border-r-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="https">https://</SelectItem>
+                            <SelectItem value="http">http://</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          id="individual-url"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          placeholder="www.example.com/page"
+                          className="rounded-l-none"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium">
+                    <Icons.chevronDown className="size-4" />
+                    Advanced options
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4 space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="max-pages">Max pages to crawl</Label>
+                        <Input id="max-pages" type="number" placeholder="100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="depth">Crawl depth</Label>
+                        <Input id="depth" type="number" placeholder="3" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="exclude">Exclude patterns</Label>
+                      <Input id="exclude" placeholder="/admin*, /login*" />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleFetchLinks}
+                    disabled={!url || isCrawling}
+                    className="w-32"
+                  >
+                    {isCrawling ? (
+                      <>
+                        <Icons.spinner className="mr-2 size-4 animate-spin" />
+                        Refetching...
+                      </>
+                    ) : (
+                      "Refetch links"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Link Sources Section - show existing and new links */}
+            {(showCrawledLinks || isCrawling) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Website Configuration</CardTitle>
-                  <CardDescription>
-                    Basic settings for your RSL document.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Link sources</CardTitle>
+                    <div className="relative">
+                      <Icons.search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-64 pl-9"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="website-url">Website URL</Label>
-                    <Input
-                      id="website-url"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      placeholder="https://example.com"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {contentList.map((content, contentIndex) => (
-                <Card key={contentIndex}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Content Configuration {contentList.length > 1 && `#${contentIndex + 1}`}
-                    </CardTitle>
-                    <CardDescription>
-                      Configure licensing for this content.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor={`content-url-${contentIndex}`}>Content URL</Label>
-                        <Input
-                          id={`content-url-${contentIndex}`}
-                          value={content.url}
-                          onChange={(e) => updateContent(contentIndex, { url: e.target.value })}
-                          placeholder="https://example.com/content"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`license-server-${contentIndex}`}>License Server</Label>
-                        <Input
-                          id={`license-server-${contentIndex}`}
-                          value={content.licenseServer}
-                          onChange={(e) => updateContent(contentIndex, { licenseServer: e.target.value })}
-                          placeholder="Optional license server URL"
-                        />
-                      </div>
+                  {isCrawling ? (
+                    <div className="py-12 text-center">
+                      <Icons.spinner className="mx-auto mb-4 size-8 animate-spin" />
+                      <p className="text-lg font-medium">Refetching links...</p>
+                      <p className="text-muted-foreground">
+                        Discovering new content for your RSL
+                      </p>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id={`encrypted-${contentIndex}`}
-                        checked={content.encrypted}
-                        onCheckedChange={(checked) => updateContent(contentIndex, { encrypted: checked })}
-                      />
-                      <Label htmlFor={`encrypted-${contentIndex}`}>Encrypted content</Label>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`last-modified-${contentIndex}`}>Last Modified</Label>
-                      <Input
-                        id={`last-modified-${contentIndex}`}
-                        value={content.lastModified}
-                        onChange={(e) => updateContent(contentIndex, { lastModified: e.target.value })}
-                        placeholder="2024-01-01"
-                        type="date"
-                      />
-                    </div>
-
-                    {/* Metadata Section */}
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" className="flex w-full justify-between p-0">
-                          <span className="font-medium">Metadata Settings</span>
-                          <Icons.chevronDown className="size-4" />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-4 pt-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor={`schema-url-${contentIndex}`}>Schema URL</Label>
-                            <Input
-                              id={`schema-url-${contentIndex}`}
-                              value={content.metadata.schemaUrl}
-                              onChange={(e) => updateContent(contentIndex, { 
-                                metadata: { ...content.metadata, schemaUrl: e.target.value }
-                              })}
-                              placeholder="https://schema.org/..."
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`copyright-type-${contentIndex}`}>Copyright Type</Label>
-                            <Select
-                              value={content.metadata.copyrightType}
-                              onValueChange={(value: "person" | "organization") => 
-                                updateContent(contentIndex, { 
-                                  metadata: { ...content.metadata, copyrightType: value }
-                                })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="person">Person</SelectItem>
-                                <SelectItem value="organization">Organization</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`contact-email-${contentIndex}`}>Contact Email</Label>
-                            <Input
-                              id={`contact-email-${contentIndex}`}
-                              value={content.metadata.contactEmail}
-                              onChange={(e) => updateContent(contentIndex, { 
-                                metadata: { ...content.metadata, contactEmail: e.target.value }
-                              })}
-                              placeholder="contact@example.com"
-                              type="email"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`contact-url-${contentIndex}`}>Contact URL</Label>
-                            <Input
-                              id={`contact-url-${contentIndex}`}
-                              value={content.metadata.contactUrl}
-                              onChange={(e) => updateContent(contentIndex, { 
-                                metadata: { ...content.metadata, contactUrl: e.target.value }
-                              })}
-                              placeholder="https://example.com/contact"
-                            />
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor={`terms-url-${contentIndex}`}>Terms URL</Label>
-                            <Input
-                              id={`terms-url-${contentIndex}`}
-                              value={content.metadata.termsUrl}
-                              onChange={(e) => updateContent(contentIndex, { 
-                                metadata: { ...content.metadata, termsUrl: e.target.value }
-                              })}
-                              placeholder="https://example.com/terms"
-                            />
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-
-                    {/* Licenses Section */}
-                    <div className="space-y-4">
+                  ) : (
+                    <>
                       <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-medium">Licenses</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addLicense(contentIndex)}
-                        >
-                          <Icons.add className="mr-2 size-4" />
-                          Add License
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={crawledLinks.every(
+                              (link) => link.selected,
+                            )}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                          <span className="text-sm font-medium">
+                            Select all
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Sort by:
+                          </span>
+                          <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="default">Default</SelectItem>
+                              <SelectItem value="url">URL</SelectItem>
+                              <SelectItem value="status">Status</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
-                      {content.licenses.map((license, licenseIndex) => (
-                        <Card key={license.id} className="p-4">
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <Input
-                                value={license.name || ''}
-                                onChange={(e) => updateLicense(contentIndex, licenseIndex, { name: e.target.value })}
-                                placeholder="License name"
-                                className="max-w-sm"
-                              />
-                              {content.licenses.length > 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeLicense(contentIndex, licenseIndex)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Icons.trash className="size-4" />
-                                </Button>
-                              )}
+                      {/* All discovered URLs */}
+                      <div className="space-y-3">
+                        {filteredLinks.map((link) => (
+                          <div
+                            key={link.id}
+                            className="overflow-hidden rounded-lg border"
+                          >
+                            {/* URL Header */}
+                            <div
+                              className="flex cursor-pointer items-center justify-between p-3 transition-colors hover:bg-muted/50"
+                              onClick={() => toggleUrlExpanded(link.url)}
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <Checkbox
+                                  checked={link.selected}
+                                  onCheckedChange={() =>
+                                    toggleLinkSelection(link.url)
+                                  }
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  <span className="max-w-full truncate text-sm">
+                                    {link.url}
+                                  </span>
+                                  {link.isNew && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700"
+                                    >
+                                      New
+                                    </Badge>
+                                  )}
+                                  {!link.isNew && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="shrink-0 border-blue-200 bg-blue-500/10 text-xs text-blue-700"
+                                    >
+                                      Existing
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <Icons.chevronDown
+                                  className={cn(
+                                    "size-4 text-muted-foreground transition-transform",
+                                    expandedUrls.has(link.url) && "rotate-180",
+                                  )}
+                                />
+                              </div>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                              <div className="space-y-2">
-                                <Label>Permitted Usage</Label>
-                                <div className="space-y-2">
-                                  {getAvailableUsageTypes().map((usage) => (
-                                    <div key={usage.id} className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`permit-${contentIndex}-${licenseIndex}-${usage.id}`}
-                                        checked={license.permits?.usage?.includes(usage.id) || false}
-                                        onChange={(e) => {
-                                          const currentUsage = license.permits?.usage || [];
-                                          const newUsage = e.target.checked
-                                            ? [...currentUsage, usage.id]
-                                            : currentUsage.filter(u => u !== usage.id);
-                                          updateLicense(contentIndex, licenseIndex, {
-                                            permits: { ...license.permits, usage: newUsage }
-                                          });
-                                        }}
-                                        className="rounded"
-                                      />
-                                      <Label 
-                                        htmlFor={`permit-${contentIndex}-${licenseIndex}-${usage.id}`}
-                                        className="text-sm"
-                                      >
-                                        {usage.label}
-                                      </Label>
+                            {/* Form Section */}
+                            {expandedUrls.has(link.url) && (
+                              <div className="border-t bg-muted/30 p-4">
+                                {link.selected ? (
+                                  <div className="space-y-4">
+                                    <div className="mb-4">
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                                        RSL Configuration
+                                      </h4>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
 
-                              <div className="space-y-2">
-                                <Label>Payment Type</Label>
-                                <Select
-                                  value={license.payment?.type || 'free'}
-                                  onValueChange={(value) => updateLicense(contentIndex, licenseIndex, {
-                                    payment: { ...license.payment, type: value as any }
-                                  })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {getAvailablePaymentTypes().map((payment) => (
-                                      <SelectItem key={payment.value} value={payment.value}>
-                                        {payment.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
+                                    <div className="space-y-6">
+                                      {/* Content Settings Card */}
+                                      <Card className="shadow-sm">
+                                        <CardHeader className="pb-3">
+                                          <CardTitle className="flex items-center gap-2 text-sm">
+                                            <Icons.settings className="size-4" />
+                                            Content Settings
+                                          </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                          <div className="grid gap-4 sm:grid-cols-2">
+                                            <div className="space-y-2">
+                                              <Label
+                                                htmlFor={`license-server-${link.id}`}
+                                              >
+                                                License Server URL
+                                              </Label>
+                                              <Input
+                                                id={`license-server-${link.id}`}
+                                                placeholder="https://license.example.com"
+                                                value={
+                                                  getCurrentRslData(link.url)
+                                                    ?.licenseServer || ""
+                                                }
+                                                onChange={(e) =>
+                                                  updatePageFormData(link.url, {
+                                                    rsl: {
+                                                      ...getCurrentRslData(
+                                                        link.url,
+                                                      ),
+                                                      licenseServer:
+                                                        e.target.value,
+                                                    },
+                                                  })
+                                                }
+                                              />
+                                            </div>
+                                            <div className="space-y-2">
+                                              <Label
+                                                htmlFor={`lastmod-${link.id}`}
+                                              >
+                                                Last Modified
+                                              </Label>
+                                              <DatePicker
+                                                date={(() => {
+                                                  const lastMod =
+                                                    getCurrentRslData(
+                                                      link.url,
+                                                    )?.lastModified;
+                                                  return lastMod
+                                                    ? new Date(lastMod)
+                                                    : undefined;
+                                                })()}
+                                                onDateChange={(date) => {
+                                                  const rfc3339 = date
+                                                    ? date.toISOString()
+                                                    : "";
+                                                  updatePageFormData(link.url, {
+                                                    rsl: {
+                                                      ...getCurrentRslData(
+                                                        link.url,
+                                                      ),
+                                                      lastModified: rfc3339,
+                                                    },
+                                                  });
+                                                }}
+                                                placeholder="Select date"
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <Switch
+                                              id={`encrypted-${link.id}`}
+                                              checked={
+                                                getCurrentRslData(link.url)
+                                                  ?.encrypted || false
+                                              }
+                                              onCheckedChange={(checked) =>
+                                                updatePageFormData(link.url, {
+                                                  rsl: {
+                                                    ...getCurrentRslData(
+                                                      link.url,
+                                                    ),
+                                                    encrypted: checked,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                            <Label
+                                              htmlFor={`encrypted-${link.id}`}
+                                              className="text-sm"
+                                            >
+                                              Content is encrypted
+                                            </Label>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
 
-                            {license.payment?.type !== 'free' && (
-                              <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                  <Label htmlFor={`amount-${contentIndex}-${licenseIndex}`}>Amount</Label>
-                                  <Input
-                                    id={`amount-${contentIndex}-${licenseIndex}`}
-                                    value={license.payment?.amount || ''}
-                                    onChange={(e) => updateLicense(contentIndex, licenseIndex, {
-                                      payment: { ...license.payment, amount: e.target.value }
-                                    })}
-                                    placeholder="10.00"
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor={`currency-${contentIndex}-${licenseIndex}`}>Currency</Label>
-                                  <Input
-                                    id={`currency-${contentIndex}-${licenseIndex}`}
-                                    value={license.payment?.currency || ''}
-                                    onChange={(e) => updateLicense(contentIndex, licenseIndex, {
-                                      payment: { ...license.payment, currency: e.target.value }
-                                    })}
-                                    placeholder="USD"
-                                  />
-                                </div>
+                                      {/* License Management Card */}
+                                      <Card className="shadow-sm">
+                                        <CardHeader className="pb-3">
+                                          <div className="flex items-center justify-between">
+                                            <CardTitle className="flex items-center gap-2 text-sm">
+                                              License Management
+                                            </CardTitle>
+                                            {getCurrentLicenses(link.url)
+                                              .length > 0 && (
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  addLicense(link.url)
+                                                }
+                                              >
+                                                <Icons.add className="mr-1 size-4" />
+                                                Add License
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                          {(() => {
+                                            const licenses = getCurrentLicenses(
+                                              link.url,
+                                            );
+
+                                            if (licenses.length === 0) {
+                                              return (
+                                                <div className="px-4 py-8 text-center">
+                                                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                                                    No licenses configured
+                                                  </h3>
+                                                  <p className="mb-4 text-xs text-muted-foreground">
+                                                    Create your first license to
+                                                    define usage rights for this
+                                                    content.
+                                                  </p>
+                                                  <Button
+                                                    onClick={() =>
+                                                      addLicense(link.url)
+                                                    }
+                                                    size="sm"
+                                                  >
+                                                    <Icons.add className="mr-1 size-4" />
+                                                    Create First License
+                                                  </Button>
+                                                </div>
+                                              );
+                                            }
+
+                                            const currentLicense =
+                                              getCurrentLicense(link.url);
+                                            if (!currentLicense) return null;
+
+                                            return (
+                                              <div className="space-y-4">
+                                                {/* License Tabs */}
+                                                {licenses.length > 1 && (
+                                                  <div className="flex flex-wrap gap-2 rounded-lg bg-muted/50 p-2">
+                                                    {licenses.map((license) => (
+                                                      <div
+                                                        key={license.id}
+                                                        className="flex items-center"
+                                                      >
+                                                        <Button
+                                                          variant={
+                                                            activeLicenseTab[
+                                                              link.url
+                                                            ] === license.id
+                                                              ? "default"
+                                                              : "ghost"
+                                                          }
+                                                          size="sm"
+                                                          onClick={() =>
+                                                            setActiveLicenseTab(
+                                                              (prev) => ({
+                                                                ...prev,
+                                                                [link.url]:
+                                                                  license.id,
+                                                              }),
+                                                            )
+                                                          }
+                                                          className="h-8 rounded-r-none"
+                                                        >
+                                                          {license.name ||
+                                                            `License ${licenses.indexOf(license) + 1}`}
+                                                        </Button>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() =>
+                                                            removeLicense(
+                                                              link.url,
+                                                              license.id,
+                                                            )
+                                                          }
+                                                          className="h-8 rounded-l-none border-l px-2 hover:bg-destructive hover:text-destructive-foreground"
+                                                          disabled={
+                                                            licenses.length ===
+                                                            1
+                                                          }
+                                                        >
+                                                          <Icons.trash className="size-3" />
+                                                        </Button>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+
+                                                {/* License Form */}
+                                                <div className="space-y-6 rounded-lg border bg-background p-4">
+                                                  {/* Basic License Info */}
+                                                  <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 border-b pb-2">
+                                                      <Icons.edit className="size-4" />
+                                                      <h4 className="text-sm font-medium">
+                                                        Basic Information
+                                                      </h4>
+                                                    </div>
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                      <div className="space-y-2">
+                                                        <Label
+                                                          htmlFor={`license-name-${link.id}`}
+                                                          className="text-sm font-medium"
+                                                        >
+                                                          License Name
+                                                        </Label>
+                                                        <Input
+                                                          id={`license-name-${link.id}`}
+                                                          placeholder="e.g., Commercial License"
+                                                          value={
+                                                            currentLicense.name ||
+                                                            ""
+                                                          }
+                                                          onChange={(e) =>
+                                                            updateCurrentLicense(
+                                                              link.url,
+                                                              {
+                                                                name: e.target
+                                                                  .value,
+                                                              },
+                                                            )
+                                                          }
+                                                          className="h-9"
+                                                        />
+                                                      </div>
+                                                      <div className="space-y-2">
+                                                        <Label
+                                                          htmlFor={`payment-type-${link.id}`}
+                                                          className="text-sm font-medium"
+                                                        >
+                                                          Payment Type
+                                                        </Label>
+                                                        <Select
+                                                          value={
+                                                            currentLicense
+                                                              .payment?.type ||
+                                                            "free"
+                                                          }
+                                                          onValueChange={(
+                                                            value: any,
+                                                          ) =>
+                                                            updateCurrentLicense(
+                                                              link.url,
+                                                              {
+                                                                payment: {
+                                                                  ...currentLicense.payment,
+                                                                  type: value,
+                                                                },
+                                                              },
+                                                            )
+                                                          }
+                                                        >
+                                                          <SelectTrigger className="h-9">
+                                                            <SelectValue placeholder="Select payment type" />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                            {getAvailablePaymentTypes().map((paymentType) => (
+                                              <SelectItem key={paymentType.value} value={paymentType.value}>
+                                                {paymentType.label}
+                                              </SelectItem>
+                                            ))}
+                                                          </SelectContent>
+                                                        </Select>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  {/* Usage Permissions */}
+                                                  <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 border-b pb-2">
+                                                      <Icons.check className="size-4 text-green-600" />
+                                                      <h4 className="text-sm font-medium">
+                                                        Permitted Usage
+                                                      </h4>
+                                                    </div>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                      {getAvailableUsageTypes().map((usage) => (
+                                                        <div
+                                                          key={usage.id}
+                                                          className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                                        >
+                                                          <Checkbox
+                                                            id={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
+                                                            checked={
+                                                              currentLicense.permits?.usage?.includes(
+                                                                usage.id,
+                                                              ) || false
+                                                            }
+                                                            onCheckedChange={(
+                                                              checked,
+                                                            ) => {
+                                                              const currentUsage =
+                                                                currentLicense
+                                                                  .permits
+                                                                  ?.usage || [];
+                                                              const newUsage =
+                                                                checked
+                                                                  ? [
+                                                                      ...currentUsage,
+                                                                      usage.id,
+                                                                    ]
+                                                                  : currentUsage.filter(
+                                                                      (u) =>
+                                                                        u !==
+                                                                        usage.id,
+                                                                    );
+                                                              updateCurrentLicense(
+                                                                link.url,
+                                                                {
+                                                                  permits: {
+                                                                    ...currentLicense.permits,
+                                                                    usage:
+                                                                      newUsage,
+                                                                  },
+                                                                },
+                                                              );
+                                                            }}
+                                                          />
+                                                          <Label
+                                                            htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
+                                                            className="cursor-pointer text-sm font-medium"
+                                                          >
+                                                            {usage.label}
+                                                          </Label>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            );
+                                          })()}
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-4 text-center text-muted-foreground">
+                                    <p className="text-sm">
+                                      Select this URL to configure RSL licensing
+                                      properties.
+                                    </p>
+                                    <Button
+                                      className="mt-3"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleLinkSelection(link.url);
+                                      }}
+                                    >
+                                      Select URL
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-
-            <TabsContent value="preview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>RSL XML Preview</CardTitle>
-                  <CardDescription>
-                    Preview of the generated RSL XML document.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <HighlightedXml code={generatePreviewXml()} />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <Card>
+        {/* Right Sidebar - Sources */}
+        <div
+          className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
+        >
+          <Card className="border-0 bg-transparent shadow-none">
             <CardHeader>
-              <CardTitle>RSL Info</CardTitle>
+              <CardTitle>Sources</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Created</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(rsl.createdAt).toLocaleDateString()}
-                  </div>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {crawlSummary?.totalPages || crawledLinks.length} Links
+                  </span>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Last Updated</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(rsl.updatedAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Content Items</div>
-                  <div className="text-sm text-muted-foreground">
-                    {contentList.length} configured
-                  </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">
+                    {crawlSummary ? 'Refetched' : 'Loaded'}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Quick Tips</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>• Use the Editor tab to modify licensing terms</p>
-                <p>• Preview changes in the XML Preview tab</p>
-                <p>• Save frequently to avoid losing changes</p>
-                <p>• Each content item can have multiple license options</p>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total size</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">
+                      {crawlSummary ? `${(crawlSummary.totalSize / 1024).toFixed(1)} KB` : 'TBD'}
+                    </span>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full bg-muted">
+                  <div 
+                    className="h-full rounded-full bg-primary transition-all duration-300" 
+                    style={{ 
+                      width: crawlSummary ? '100%' : '100%' // Always show as loaded for existing RSL
+                    }}
+                  />
+                </div>
               </div>
+
+              {/* RSL Configuration Summary */}
+              {showCrawledLinks && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      RSL Configuration
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    {(() => {
+                      const selectedLinks = crawledLinks.filter(
+                        (link) => link.selected,
+                      );
+                      const configuredLinks = selectedLinks.filter(
+                        (link) =>
+                          link.formData?.rsl &&
+                          (link.formData.rsl.licenses?.length || 0) > 0,
+                      );
+                      const existingLinks = crawledLinks.filter(link => !link.isNew);
+                      const newLinks = crawledLinks.filter(link => link.isNew);
+
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              URLs selected:
+                            </span>
+                            <span className="font-medium">
+                              {selectedLinks.length}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Existing URLs:
+                            </span>
+                            <span className="font-medium">
+                              {existingLinks.length}
+                            </span>
+                          </div>
+
+                          {newLinks.length > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">
+                                New URLs:
+                              </span>
+                              <span className="font-medium text-green-600">
+                                {newLinks.length}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              URLs configured:
+                            </span>
+                            <span className="font-medium">
+                              {configuredLinks.length}
+                            </span>
+                          </div>
+
+                          {configuredLinks.length > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">
+                                Total licenses:
+                              </span>
+                              <span className="font-medium">
+                                {configuredLinks.reduce(
+                                  (total, link) =>
+                                    total +
+                                    (link.formData?.rsl?.licenses?.length || 0),
+                                  0,
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleUpdateRsl}
+                disabled={isGeneratingXml}
+              >
+                {isGeneratingXml ? (
+                  <>
+                    <Icons.spinner className="mr-2 size-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update RSL"
+                )}
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Plan Limit Modal */}
+      <Dialog open={showPlanLimitModal} onOpenChange={setShowPlanLimitModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-blue-100">
+              <Icons.warning className="size-6 text-blue-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">
+              Plan limit reached!
+            </DialogTitle>
+            <DialogDescription className="text-center text-muted-foreground">
+              You&apos;ve reached the total free limit of 10 links. You can
+              delete some links to add new ones or upgrade your plan
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex justify-center">
+            <Button
+              onClick={() => setShowPlanLimitModal(false)}
+              className="px-8"
+            >
+              Upgrade plan
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

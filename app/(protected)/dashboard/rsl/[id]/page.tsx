@@ -707,7 +707,7 @@ ${contentElements}
           </div>
 
           {/* Right Sidebar - Actions */}
-          <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{ backgroundColor: 'rgb(244, 244, 245)' }}>
+          <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6 bg-muted/30 dark:bg-muted/20">
             <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -758,7 +758,7 @@ ${contentElements}
                   <Button
                     onClick={handleSaveRsl}
                     disabled={isSaving || !generatedXml || !url}
-                    className="w-full bg-black text-white hover:bg-black/90"
+                    className="w-full"
                     size="lg"
                   >
                     {isSaving ? (
@@ -1359,7 +1359,7 @@ ${contentElements}
               )}
 
               <Button
-                className="w-full bg-black text-white hover:bg-black/90"
+                className="w-full"
                 size="lg"
                 onClick={handleUpdateRsl}
                 disabled={isGeneratingXml}

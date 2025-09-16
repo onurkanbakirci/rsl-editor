@@ -412,8 +412,8 @@ export default function CreateRSLPage() {
           </div>
         </DashboardHeader>
 
-        <div className="flex">
-          <div className="w-3/5 min-w-0 flex-1 pr-6">
+        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+          <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -438,10 +438,10 @@ export default function CreateRSLPage() {
                     >
                       <Icons.copy className="size-4" />
                     </Button>
-                    <div className="p-4 pr-16">
+                    <div className="p-4 pr-16 overflow-x-auto">
                       <HighlightedXml
                         code={generatedXml}
-                        className="text-sm leading-relaxed"
+                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
                       />
                     </div>
                   </div>
@@ -452,8 +452,7 @@ export default function CreateRSLPage() {
 
           {/* Right Sidebar - Actions */}
           <div
-            className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6"
-            style={{ backgroundColor: "rgb(244, 244, 245)" }}
+            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
           >
             <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
@@ -516,7 +515,7 @@ export default function CreateRSLPage() {
                   <Button
                     onClick={handleSaveRsl}
                     disabled={isSaving || !generatedXml || !url}
-                    className="w-full bg-black text-white hover:bg-black/90"
+                    className="w-full"
                     size="lg"
                   >
                     {isSaving ? (
@@ -632,8 +631,8 @@ export default function CreateRSLPage() {
         </div>
       </DashboardHeader>
 
-      <div className="flex">
-        <div className="w-3/5 min-w-0 flex-1 pr-6">
+      <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
+        <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -1276,8 +1275,7 @@ export default function CreateRSLPage() {
 
         {/* Right Sidebar - Sources */}
         <div
-          className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6"
-          style={{ backgroundColor: "rgb(244, 244, 245)" }}
+          className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
         >
           <Card className="border-0 bg-transparent shadow-none">
             <CardHeader>
@@ -1379,7 +1377,7 @@ export default function CreateRSLPage() {
               )}
 
               <Button
-                className="w-full bg-black text-white hover:bg-black/90"
+                className="w-full"
                 size="lg"
                 onClick={handleCreateRsl}
                 disabled={isGeneratingXml}
