@@ -103,8 +103,7 @@ export function UserAccountNav() {
                 onClick={(event) => {
                   event.preventDefault();
                   signOut({
-                    callbackUrl: "/",
-                    redirect: true,
+                    callbackUrl: `${window.location.origin}/`,
                   });
                 }}
               >
@@ -173,8 +172,7 @@ export function UserAccountNav() {
           onSelect={(event) => {
             event.preventDefault();
             signOut({
-              callbackUrl: "/",
-              redirect: true,
+              callbackUrl: `${window.location.origin}/`,
             });
           }}
         >

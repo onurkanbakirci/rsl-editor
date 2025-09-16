@@ -18,8 +18,6 @@ declare module "next-auth" {
 export const {
   handlers: { GET, POST },
   auth,
-  signIn,
-  signOut,
 } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -62,14 +60,6 @@ export const {
       token.role = dbUser.role;
 
       return token;
-    },
-
-    async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
     },
   },
   ...authConfig,
