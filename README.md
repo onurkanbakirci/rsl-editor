@@ -1,11 +1,7 @@
-<a href="https://github.com/onurkanbakirci/rsl-editor">
-  <img alt="RSL Editor" src="public/_static/og.png">
-  <img alt="RSL Editor" src="public/_static/og-2.png">
-  <h1 align="center">RSL Editor</h1>
-</a>
+<h1 align="center">RSL Editor</h1>
 
 <p align="center">
-  The open content licensing standard for the AI-first Internet
+  The open content licensing editor for the AI-first Internet
 </p>
 
 <p align="center">
@@ -24,12 +20,10 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="#introduction"><strong>Introduction</strong></a> ·
-  <a href="#usage"><strong>Usage</strong></a> ·
-  <a href="#contributing"><strong>Contributing</strong></a> ·
-  <a href="#license"><strong>License</strong></a>
-</p>
+<a href="https://github.com/onurkanbakirci/rsl-editor">
+  <img alt="RSL Editor" src="public/_static/og.png">
+  <img alt="RSL Editor" src="public/_static/og-2.png">
+</a>
 <br/>
 
 ## Introduction
