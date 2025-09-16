@@ -12,12 +12,12 @@ export default function IndexPage() {
     <>
       <HeroLanding />
       <PreviewLanding />
-      <Powered />
+      {/* <Powered /> */}
       <BentoGrid />
       <InfoLanding data={infos[0]} reverse={true} />
-      {/* <InfoLanding data={infos[1]} /> */}
+      {/* <InfoLanding data={infos[1]} /> */}i
       <Features />
-      <Testimonials />
+      {/* <Testimonials /> */}
     </>
   );
 }

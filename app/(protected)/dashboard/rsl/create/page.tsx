@@ -544,7 +544,7 @@ ${contentElements}
                   <Button
                     onClick={handleSaveRsl}
                     disabled={isSaving || !generatedXml || !url}
-                    className="w-full bg-green-600 text-white hover:bg-green-700"
+                    className="w-full bg-black text-white hover:bg-black/90"
                     size="lg"
                   >
                     {isSaving ? (

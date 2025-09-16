@@ -25,18 +25,18 @@ export default async function HeroLanding() {
 
         <h1 className="text-balance font-urban text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-[66px]">
           <span className="bg-gradient-to-r from-rsl-purple to-rsl-magenta bg-clip-text font-extrabold text-transparent">
-            RSL
+            RSL Editor
           </span>
           <br className="hidden sm:block" />
-          <span className="text-foreground">Really Simple Licensing</span>
+          <span className="text-foreground">Really Simple Licensing Editor</span>
         </h1>
 
         <p
           className="max-w-2xl text-balance leading-normal text-muted-foreground sm:text-xl sm:leading-8"
           style={{ animationDelay: "0.35s", animationFillMode: "forwards" }}
         >
-          The open content licensing standard for the AI-first Internet. 
-          Manage content rights and permissions with simple, standardized licensing.
+          Easily create, edit, and manage your RSL documents. 
+          A powerful editor that simplifies content rights and permissions management with standardized licensing.
         </p>
 
         <div
@@ -44,14 +44,14 @@ export default async function HeroLanding() {
           style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}
         >
           <Link
-            href="/docs"
+            href="/login"
             prefetch={true}
             className={cn(
               buttonVariants({ size: "lg", rounded: "full" }),
               "gap-2 bg-rsl-orange text-white hover:bg-rsl-orange/90",
             )}
           >
-            <span>Learn RSL</span>
+            <span>Let's get started</span>
             <Icons.arrowRight className="size-4" />
           </Link>
           <Link

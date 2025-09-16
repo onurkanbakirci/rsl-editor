@@ -124,9 +124,9 @@ export const Icons = {
   logo: ({ className, ...props }: LucideProps) => (
     <NextImage
       src="/images/rsl-logo.svg"
-      alt="RSL Logo"
-      width={32}
-      height={32}
+      alt="RSL Editor Logo"
+      width={48}
+      height={48}
       className={className}
       style={props.style}
     />
