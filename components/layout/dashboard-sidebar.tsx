@@ -31,6 +31,21 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ links }: DashboardSidebarProps) {
   const path = usePathname();
 
+  // Helper function to determine if a navigation item should be active
+  const isActiveNavItem = (itemHref: string) => {
+    // Exact match for non-nested routes
+    if (path === itemHref) {
+      return true;
+    }
+    
+    // For RSL routes, consider sub-routes as active
+    if (itemHref === "/dashboard/rsl" && path.startsWith("/dashboard/rsl")) {
+      return true;
+    }
+    
+    return false;
+  };
+
   // NOTE: Use this if you want save in local storage -- Credits: Hosna Qasmei
   //
   // const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
@@ -122,7 +137,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                                 href={item.disabled ? "#" : item.href}
                                 className={cn(
                                   "flex items-center gap-3 rounded-md p-2 text-sm font-medium hover:bg-muted",
-                                  path === item.href
+                                  isActiveNavItem(item.href)
                                     ? "bg-muted"
                                     : "text-muted-foreground hover:text-accent-foreground",
                                   item.disabled &&
@@ -145,7 +160,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                                     href={item.disabled ? "#" : item.href}
                                     className={cn(
                                       "flex items-center gap-3 rounded-md py-2 text-sm font-medium hover:bg-muted",
-                                      path === item.href
+                                      isActiveNavItem(item.href)
                                         ? "bg-muted"
                                         : "text-muted-foreground hover:text-accent-foreground",
                                       item.disabled &&
@@ -185,6 +200,21 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const { isSm, isMobile } = useMediaQuery();
+
+  // Helper function to determine if a navigation item should be active
+  const isActiveNavItem = (itemHref: string) => {
+    // Exact match for non-nested routes
+    if (path === itemHref) {
+      return true;
+    }
+    
+    // For RSL routes, consider sub-routes as active
+    if (itemHref === "/dashboard/rsl" && path.startsWith("/dashboard/rsl")) {
+      return true;
+    }
+    
+    return false;
+  };
 
   if (isSm || isMobile) {
     return (
@@ -234,7 +264,7 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
                               href={item.disabled ? "#" : item.href}
                               className={cn(
                                 "flex items-center gap-3 rounded-md p-2 text-sm font-medium hover:bg-muted",
-                                path === item.href
+                                isActiveNavItem(item.href)
                                   ? "bg-muted"
                                   : "text-muted-foreground hover:text-accent-foreground",
                                 item.disabled &&

@@ -25,32 +25,54 @@ export default function RSLReviewLoading() {
         </div>
       </DashboardHeader>
 
-      <div className="max-w-6xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">
-              <Skeleton className="h-7 w-48" />
-            </CardTitle>
-            <CardDescription>
-              <Skeleton className="h-4 w-80" />
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-9 w-20" />
-              </div>
-              <div className="h-96 rounded-lg border bg-background">
-                <div className="space-y-2 p-4">
-                  {[...Array(12)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
-                  ))}
+      <div className="flex">
+        <div className="w-3/5 min-w-0 flex-1 pr-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold">
+                  <Skeleton className="h-7 w-48" />
+                </CardTitle>
+                <CardDescription>
+                  <Skeleton className="h-4 w-80" />
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-9 w-20" />
+                  </div>
+                  <div className="h-96 rounded-lg border bg-background">
+                    <div className="space-y-2 p-4">
+                      {[...Array(12)].map((_, i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Loading */}
+        <div 
+          className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" 
+          style={{ backgroundColor: "rgb(244, 244, 245)" }}
+        >
+          <Card className="border-0 bg-transparent shadow-none">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </>
   )

@@ -676,7 +676,7 @@ ${contentElements}
         </DashboardHeader>
 
         <div className="flex">
-          <div className="w-3/5 flex-1 pr-6">
+          <div className="w-3/5 min-w-0 flex-1 pr-6">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -874,7 +874,7 @@ ${contentElements}
       </DashboardHeader>
 
       <div className="flex">
-        <div className="w-3/5 flex-1 pr-6">
+        <div className="w-3/5 min-w-0 flex-1 pr-6">
           <div className="space-y-6">
             <Card>
               <CardHeader>
