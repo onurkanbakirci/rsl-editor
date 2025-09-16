@@ -5,6 +5,16 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import {
+  generateRslXml,
+  validateRslData,
+  createNewLicense,
+  getAvailableUsageTypes,
+  getAvailablePaymentTypes,
+  type RslContent,
+  type RslLicense,
+} from "@/lib/rsl-generator";
+// Remove all crawling-related imports - everything is handled server-side now
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,44 +62,11 @@ interface CrawledLink {
   isNew?: boolean;
   selected: boolean;
   formData?: {
-    // RSL-specific fields only
     rsl?: {
       licenseServer?: string;
       encrypted?: boolean;
       lastModified?: string;
-      // Multiple licenses per content (key insight from RSL spec)
-      licenses?: Array<{
-        id: string; // Unique identifier for this license
-        name?: string; // User-friendly name for this license option
-        permits?: {
-          usage?: string[];
-          user?: string[];
-          geo?: string[];
-        };
-        prohibits?: {
-          usage?: string[];
-          user?: string[];
-          geo?: string[];
-        };
-        payment?: {
-          type?:
-            | "purchase"
-            | "subscription"
-            | "training"
-            | "crawl"
-            | "inference"
-            | "attribution"
-            | "free";
-          standardUrls?: string[]; // Multiple standard URLs allowed
-          customUrl?: string; // Only one custom URL
-          amount?: string;
-          currency?: string;
-        };
-        legal?: Array<{
-          type: "warranty" | "disclaimer";
-          terms: string[];
-        }>;
-      }>;
+      licenses?: RslLicense[];
       metadata?: {
         schemaUrl?: string;
         copyrightType?: "person" | "organization";
@@ -101,38 +78,24 @@ interface CrawledLink {
   };
 }
 
-// Mock URLs from the image
-const mockDiscoveredUrls = [
-  "https://cursor.com/cn/blog/openai-fund",
-  "https://cursor.com/en/changelog/new-upstream",
-  "https://cursor.com/en/changelog/early-preview-hold-cmd-tap-shift-to-trigger-ai...",
-  "https://cursor.com/cn/changelog/stable-indexing-v0-1",
-  "https://cursor.com/cn/changelog/cursor-tab-python-auto-import-composer-imp...",
-  "https://cursor.com/cn/changelog/v0-1-7-2023-03-25-",
-  "https://cursor.com/cn/changelog/-0-4-2-hotfixes",
-  "https://cursor.com/ja/changelog/release-for-linux",
-];
-
-// Mock data for demonstration
-const mockCrawledLinks: CrawledLink[] = [
-  {
-    id: "1",
-    url: "https://cursor.com/",
-    status: "crawling",
-    isNew: true,
-    selected: false,
-  },
-];
+// All crawling is now handled server-side
 
 export default function CreateRSLPage() {
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
+  const [crawlSummary, setCrawlSummary] = useState<{
+    totalPages: number;
+    totalSize: number; 
+    crawlTime: number;
+    baseUrl: string;
+    message: string;
+  } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [url, setUrl] = useState("");
   const [protocol, setProtocol] = useState("https");
   const [showPlanLimitModal, setShowPlanLimitModal] = useState(false);
-  const [linkCount, setLinkCount] = useState(901);
+  // Removed linkCount - using actual crawled data now
   const [isLinksExpanded, setIsLinksExpanded] = useState(false);
   const [showCrawledLinks, setShowCrawledLinks] = useState(false);
   const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
@@ -149,32 +112,63 @@ export default function CreateRSLPage() {
     if (!url) return;
 
     setIsCrawling(true);
-    // Simulate crawling
-    setTimeout(() => {
-      const mainUrl = `${protocol}://${url}`;
-      const mainUrlLink: CrawledLink = {
-        id: "main",
-        url: mainUrl,
-        status: "completed",
-        isNew: true,
-        selected: false,
-      };
+    try {
+      // Construct the full URL
+      const fullUrl = `${protocol}://${url}`;
+      
+      // Determine crawling method based on current tab
+      const activeTab = document.querySelector('[data-state="active"]')?.getAttribute('value') || 'crawl';
+      
+      // Prepare crawl options for full website crawl
+      const maxPages = parseInt((document.getElementById('max-pages') as HTMLInputElement)?.value || '100');
+      const maxDepth = parseInt((document.getElementById('depth') as HTMLInputElement)?.value || '3');
+      const excludePatterns = (document.getElementById('exclude') as HTMLInputElement)?.value
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0) || [];
 
-      // Add discovered URLs as separate crawled links
-      const discoveredLinks: CrawledLink[] = mockDiscoveredUrls.map(
-        (discoveredUrl, index) => ({
-          id: `discovered-${index}`,
-          url: discoveredUrl,
-          status: "completed",
-          isNew: true,
-          selected: false,
+      // Call the crawl API - server handles everything
+      const response = await fetch('/api/crawl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: fullUrl,
+          crawlType: activeTab,
+          options: {
+            maxPages,
+            maxDepth,
+            excludePatterns,
+          },
         }),
-      );
+      });
 
-      setCrawledLinks([mainUrlLink, ...discoveredLinks]);
+      const apiResult = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(apiResult.error || 'API request failed');
+      }
+
+      if (apiResult.success) {
+        // Server returns ready-to-use links
+        setCrawledLinks(apiResult.links);
+        setCrawlSummary(apiResult.summary);
+        setShowCrawledLinks(true);
+        toast.success(apiResult.summary.message);
+      } else {
+        toast.error('Crawling failed', {
+          description: apiResult.errors.join(', '),
+        });
+      }
+    } catch (error) {
+      console.error('Crawling error:', error);
+      toast.error('Crawling failed', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+    } finally {
       setIsCrawling(false);
-      setShowCrawledLinks(true);
-    }, 2000);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -215,17 +209,10 @@ export default function CreateRSLPage() {
   };
 
   const addLicense = (pageUrl: string) => {
-    const newLicense = {
-      id: `license-${Date.now()}`,
-      name: `License Option ${getCurrentLicenses(pageUrl).length + 1}`,
-      permits: { usage: [], user: [], geo: [] },
-      prohibits: { usage: [], user: [], geo: [] },
-      payment: { type: "free" as const },
-      legal: [],
-    };
+    const currentLicenses = getCurrentLicenses(pageUrl);
+    const newLicense = createNewLicense(currentLicenses.length);
 
     const currentRsl = getCurrentRslData(pageUrl);
-    const currentLicenses = currentRsl?.licenses || [];
 
     updatePageFormData(pageUrl, {
       rsl: {
@@ -293,127 +280,24 @@ export default function CreateRSLPage() {
     });
   };
 
-  const generateRslXml = () => {
+  const generateRslXmlFromLinks = () => {
     const selectedLinks = crawledLinks.filter(
       (link) => link.selected && link.formData?.rsl,
     );
 
-    if (selectedLinks.length === 0) {
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<rsl xmlns="https://rslstandard.org/rsl">
-  <!-- No content selected for licensing -->
-</rsl>`;
+    const rslContents: RslContent[] = selectedLinks.map(link => ({
+      url: link.url,
+      rsl: link.formData!.rsl!,
+    }));
+
+    // Validate the data before generation
+    const validation = validateRslData(rslContents);
+    if (!validation.isValid) {
+      console.warn('RSL validation warnings:', validation.errors);
+      // Continue anyway, as some warnings might be acceptable
     }
 
-    const contentElements = selectedLinks
-      .map((link) => {
-        const rslData = link.formData!.rsl!;
-        const licenses = rslData.licenses || [];
-
-        // Build content attributes
-        let contentAttrs = `url="${link.url}"`;
-        if (rslData.licenseServer)
-          contentAttrs += ` server="${rslData.licenseServer}"`;
-        if (rslData.encrypted) contentAttrs += ` encrypted="true"`;
-        if (rslData.lastModified)
-          contentAttrs += ` lastmod="${rslData.lastModified}"`;
-
-        // Build license elements
-        const licenseElements = licenses
-          .map((license) => {
-            let licenseContent = "";
-
-            // Permits
-            if (license.permits?.usage?.length) {
-              licenseContent += `    <permits type="usage">${license.permits.usage.join(",")}</permits>\n`;
-            }
-            if (license.permits?.user?.length) {
-              licenseContent += `    <permits type="user">${license.permits.user.join(",")}</permits>\n`;
-            }
-            if (license.permits?.geo?.length) {
-              licenseContent += `    <permits type="geo">${license.permits.geo.join(",")}</permits>\n`;
-            }
-
-            // Prohibits
-            if (license.prohibits?.usage?.length) {
-              licenseContent += `    <prohibits type="usage">${license.prohibits.usage.join(",")}</prohibits>\n`;
-            }
-            if (license.prohibits?.user?.length) {
-              licenseContent += `    <prohibits type="user">${license.prohibits.user.join(",")}</prohibits>\n`;
-            }
-            if (license.prohibits?.geo?.length) {
-              licenseContent += `    <prohibits type="geo">${license.prohibits.geo.join(",")}</prohibits>\n`;
-            }
-
-            // Payment
-            if (license.payment?.type) {
-              let paymentContent = "";
-              if (license.payment.standardUrls?.length) {
-                paymentContent +=
-                  license.payment.standardUrls
-                    .map((url) => `      <standard>${url}</standard>`)
-                    .join("\n") + "\n";
-              }
-              if (license.payment.customUrl) {
-                paymentContent += `      <custom>${license.payment.customUrl}</custom>\n`;
-              }
-              if (license.payment.amount && license.payment.currency) {
-                paymentContent += `      <amount currency="${license.payment.currency}">${license.payment.amount}</amount>\n`;
-              }
-
-              if (paymentContent) {
-                licenseContent += `    <payment type="${license.payment.type}">\n${paymentContent}    </payment>\n`;
-              } else {
-                licenseContent += `    <payment type="${license.payment.type}"/>\n`;
-              }
-            }
-
-            // Legal
-            if (license.legal?.length) {
-              license.legal.forEach((legal) => {
-                if (legal.terms.length) {
-                  licenseContent += `    <legal type="${legal.type}">${legal.terms.join(",")}</legal>\n`;
-                }
-              });
-            }
-
-            return `  <license>\n${licenseContent}  </license>`;
-          })
-          .join("\n");
-
-        // Build metadata elements
-        let metadataElements = "";
-        if (rslData.metadata?.schemaUrl) {
-          metadataElements += `  <schema>${rslData.metadata.schemaUrl}</schema>\n`;
-        }
-        if (
-          rslData.metadata?.copyrightType ||
-          rslData.metadata?.contactEmail ||
-          rslData.metadata?.contactUrl
-        ) {
-          let copyrightAttrs = "";
-          if (rslData.metadata.copyrightType)
-            copyrightAttrs += ` type="${rslData.metadata.copyrightType}"`;
-          if (rslData.metadata.contactEmail)
-            copyrightAttrs += ` contactEmail="${rslData.metadata.contactEmail}"`;
-          if (rslData.metadata.contactUrl)
-            copyrightAttrs += ` contactUrl="${rslData.metadata.contactUrl}"`;
-          metadataElements += `  <copyright${copyrightAttrs}/>\n`;
-        }
-        if (rslData.metadata?.termsUrl) {
-          metadataElements += `  <terms>${rslData.metadata.termsUrl}</terms>\n`;
-        }
-
-        return `  <content ${contentAttrs}>
-${licenseElements}
-${metadataElements}  </content>`;
-      })
-      .join("\n");
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<rsl xmlns="https://rslstandard.org/rsl">
-${contentElements}
-</rsl>`;
+    return generateRslXml(rslContents);
   };
 
   const handleCreateRsl = async () => {
@@ -422,7 +306,7 @@ ${contentElements}
     // Simulate loading time for better UX
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const xml = generateRslXml();
+    const xml = generateRslXmlFromLinks();
     setGeneratedXml(xml);
     setIsGeneratingXml(false);
     setShowXmlPreview(true);
@@ -583,9 +467,9 @@ ${contentElements}
                     <span className="text-muted-foreground">Website:</span>
                     <span
                       className="ml-2 max-w-[200px] truncate font-medium"
-                      title={`${protocol}://${url}`}
+                      title={crawlSummary?.baseUrl || `${protocol}://${url}`}
                     >
-                      {`${protocol}://${url}`}
+                      {crawlSummary?.baseUrl || `${protocol}://${url}`}
                     </span>
                   </div>
 
@@ -1283,27 +1167,11 @@ ${contentElements}
                                                             <SelectValue placeholder="Select payment type" />
                                                           </SelectTrigger>
                                                           <SelectContent>
-                                                            <SelectItem value="free">
-                                                              Free
-                                                            </SelectItem>
-                                                            <SelectItem value="purchase">
-                                                              Purchase
-                                                            </SelectItem>
-                                                            <SelectItem value="subscription">
-                                                              Subscription
-                                                            </SelectItem>
-                                                            <SelectItem value="training">
-                                                              Training
-                                                            </SelectItem>
-                                                            <SelectItem value="crawl">
-                                                              Crawl
-                                                            </SelectItem>
-                                                            <SelectItem value="inference">
-                                                              Inference
-                                                            </SelectItem>
-                                                            <SelectItem value="attribution">
-                                                              Attribution
-                                                            </SelectItem>
+                                            {getAvailablePaymentTypes().map((paymentType) => (
+                                              <SelectItem key={paymentType.value} value={paymentType.value}>
+                                                {paymentType.label}
+                                              </SelectItem>
+                                            ))}
                                                           </SelectContent>
                                                         </Select>
                                                       </div>
@@ -1318,33 +1186,8 @@ ${contentElements}
                                                         Permitted Usage
                                                       </h4>
                                                     </div>
-                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                                      {[
-                                                        {
-                                                          id: "all",
-                                                          label: "All Usage",
-                                                        },
-                                                        {
-                                                          id: "train-ai",
-                                                          label: "Train AI",
-                                                        },
-                                                        {
-                                                          id: "train-genai",
-                                                          label: "Train GenAI",
-                                                        },
-                                                        {
-                                                          id: "ai-use",
-                                                          label: "AI Use",
-                                                        },
-                                                        {
-                                                          id: "ai-summarize",
-                                                          label: "AI Summarize",
-                                                        },
-                                                        {
-                                                          id: "search",
-                                                          label: "Search",
-                                                        },
-                                                      ].map((usage) => (
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                      {getAvailableUsageTypes().map((usage) => (
                                                         <div
                                                           key={usage.id}
                                                           className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
@@ -1447,11 +1290,14 @@ ${contentElements}
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{linkCount} Links</span>
+                  <span className="font-medium">
+                    {crawlSummary?.totalPages || crawledLinks.length} Links
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">TBD</span>
-                  <Icons.help className="size-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {crawlSummary ? 'Crawled' : 'Ready'}
+                  </span>
                 </div>
               </div>
 
@@ -1459,12 +1305,18 @@ ${contentElements}
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total size</span>
                   <div className="flex items-center gap-1">
-                    <span className="font-medium">TBD / 400 KB</span>
-                    <Icons.help className="size-3 text-muted-foreground" />
+                    <span className="font-medium">
+                      {crawlSummary ? `${(crawlSummary.totalSize / 1024).toFixed(1)} KB` : 'TBD'}
+                    </span>
                   </div>
                 </div>
                 <div className="h-2 rounded-full bg-muted">
-                  <div className="h-full w-0 rounded-full bg-primary" />
+                  <div 
+                    className="h-full rounded-full bg-primary transition-all duration-300" 
+                    style={{ 
+                      width: crawlSummary ? '100%' : '0%' 
+                    }}
+                  />
                 </div>
               </div>
 

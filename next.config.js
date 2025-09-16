@@ -23,7 +23,7 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverComponentsExternalPackages: ["@prisma/client"],
+    serverComponentsExternalPackages: ["@prisma/client", "@crawlee/cheerio", "crawlee", "@apify/ps-tree"],
     esmExternals: true,
   },
   transpilePackages: ["shiki"],
