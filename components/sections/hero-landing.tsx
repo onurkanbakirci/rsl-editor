@@ -51,7 +51,7 @@ export default async function HeroLanding() {
               "gap-2 bg-rsl-orange text-white hover:bg-rsl-orange/90",
             )}
           >
-            <span>Let's get started</span>
+            <span>Let&apos;s get started</span>
             <Icons.arrowRight className="size-4" />
           </Link>
           <Link
