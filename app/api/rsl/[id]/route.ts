@@ -94,3 +94,68 @@ export const GET = auth(async (req, { params }) => {
     return new Response("Internal server error", { status: 500 });
   }
 });
+
+export const PUT = auth(async (req, { params }) => {
+  if (!req.auth) {
+    return new Response("Not authenticated", { status: 401 });
+  }
+
+  const currentUser = req.auth.user;
+  if (!currentUser) {
+    return new Response("Invalid user", { status: 401 });
+  }
+
+  try {
+    const { id } = params as { id: string };
+    
+    if (!id) {
+      return new Response("RSL ID is required", { status: 400 });
+    }
+
+    const body = await req.json();
+    const { websiteUrl, xmlContent } = body;
+
+    if (!websiteUrl || !xmlContent) {
+      return new Response("Missing required fields: websiteUrl and xmlContent", { 
+        status: 400 
+      });
+    }
+
+    // Check if the RSL exists and belongs to the current user
+    const existingRsl = await prisma.rsl.findFirst({
+      where: {
+        id: id,
+        userId: currentUser.id,
+      },
+    });
+
+    if (!existingRsl) {
+      return new Response("RSL not found", { status: 404 });
+    }
+
+    // Update the RSL record
+    const updatedRsl = await prisma.rsl.update({
+      where: {
+        id: id,
+      },
+      data: {
+        websiteUrl,
+        xmlContent,
+        updatedAt: new Date(),
+      },
+    });
+
+    return Response.json({ 
+      success: true, 
+      data: {
+        id: updatedRsl.id,
+        websiteUrl: updatedRsl.websiteUrl,
+        updatedAt: updatedRsl.updatedAt,
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error updating RSL:", error);
+    return new Response("Internal server error", { status: 500 });
+  }
+});

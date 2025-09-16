@@ -16,10 +16,6 @@ export default function CreateRSLLoading() {
             <Icons.arrowLeft className="mr-2 size-4" />
             Back
           </Button>
-          <Button disabled>
-            <Icons.help className="mr-2 size-4" />
-            Learn more
-          </Button>
         </div>
       </DashboardHeader>
 

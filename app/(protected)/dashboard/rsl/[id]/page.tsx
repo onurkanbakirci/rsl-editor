@@ -87,7 +87,7 @@ export default function RSLReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showXmlView, setShowXmlView] = useState(true);
-  
+
   // Create page state (same as create page)
   const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,20 +107,20 @@ export default function RSLReviewPage() {
     try {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-      
+
       const contentElements = xmlDoc.getElementsByTagName('content');
       const links: CrawledLink[] = [];
-      
+
       Array.from(contentElements).forEach((contentEl, index) => {
         const contentUrl = contentEl.getAttribute('url') || websiteUrl;
         const licenseServer = contentEl.getAttribute('server') || '';
         const encrypted = contentEl.getAttribute('encrypted') === 'true';
         const lastModified = contentEl.getAttribute('lastmod') || '';
-        
+
         // Parse licenses
         const licenseElements = contentEl.getElementsByTagName('license');
         const licenses: any[] = [];
-        
+
         Array.from(licenseElements).forEach((licenseEl, licenseIndex) => {
           const license: any = {
             id: `license-${Date.now()}-${licenseIndex}`,
@@ -130,7 +130,7 @@ export default function RSLReviewPage() {
             payment: { type: 'free' },
             legal: []
           };
-          
+
           // Parse permits
           const permitElements = licenseEl.getElementsByTagName('permits');
           Array.from(permitElements).forEach(permitEl => {
@@ -140,7 +140,7 @@ export default function RSLReviewPage() {
               license.permits[type] = values;
             }
           });
-          
+
           // Parse prohibits
           const prohibitElements = licenseEl.getElementsByTagName('prohibits');
           Array.from(prohibitElements).forEach(prohibitEl => {
@@ -150,21 +150,21 @@ export default function RSLReviewPage() {
               license.prohibits[type] = values;
             }
           });
-          
+
           // Parse payment
           const paymentElements = licenseEl.getElementsByTagName('payment');
           if (paymentElements.length > 0) {
             const paymentEl = paymentElements[0];
             license.payment.type = paymentEl.getAttribute('type') || 'free';
-            
+
             const standardElements = paymentEl.getElementsByTagName('standard');
             license.payment.standardUrls = Array.from(standardElements).map(el => el.textContent || '').filter(url => url);
-            
+
             const customElements = paymentEl.getElementsByTagName('custom');
             if (customElements.length > 0) {
               license.payment.customUrl = customElements[0].textContent || '';
             }
-            
+
             const amountElements = paymentEl.getElementsByTagName('amount');
             if (amountElements.length > 0) {
               const amountEl = amountElements[0];
@@ -172,7 +172,7 @@ export default function RSLReviewPage() {
               license.payment.currency = amountEl.getAttribute('currency') || '';
             }
           }
-          
+
           // Parse legal
           const legalElements = licenseEl.getElementsByTagName('legal');
           Array.from(legalElements).forEach(legalEl => {
@@ -182,17 +182,17 @@ export default function RSLReviewPage() {
               license.legal.push({ type, terms });
             }
           });
-          
+
           licenses.push(license);
         });
-        
+
         // Parse metadata
         const metadata: any = {};
         const schemaElements = contentEl.getElementsByTagName('schema');
         if (schemaElements.length > 0) {
           metadata.schemaUrl = schemaElements[0].textContent || '';
         }
-        
+
         const copyrightElements = contentEl.getElementsByTagName('copyright');
         if (copyrightElements.length > 0) {
           const copyrightEl = copyrightElements[0];
@@ -200,12 +200,12 @@ export default function RSLReviewPage() {
           metadata.contactEmail = copyrightEl.getAttribute('contactEmail') || '';
           metadata.contactUrl = copyrightEl.getAttribute('contactUrl') || '';
         }
-        
+
         const termsElements = contentEl.getElementsByTagName('terms');
         if (termsElements.length > 0) {
           metadata.termsUrl = termsElements[0].textContent || '';
         }
-        
+
         // Create crawled link object
         const link: CrawledLink = {
           id: `content-${index}`,
@@ -222,10 +222,10 @@ export default function RSLReviewPage() {
             }
           }
         };
-        
+
         links.push(link);
       });
-      
+
       return links;
     } catch (error) {
       console.error('Error parsing XML:', error);
@@ -244,8 +244,8 @@ export default function RSLReviewPage() {
 
   const updatePageFormData = (pageUrl: string, formData: Partial<CrawledLink['formData']>) => {
     setCrawledLinks(prev => prev.map(link =>
-      link.url === pageUrl ? { 
-        ...link, 
+      link.url === pageUrl ? {
+        ...link,
         formData: { ...link.formData, ...formData }
       } : link
     ));
@@ -260,17 +260,17 @@ export default function RSLReviewPage() {
       payment: { type: "free" as const },
       legal: []
     };
-    
+
     const currentRsl = getCurrentRslData(pageUrl);
     const currentLicenses = currentRsl?.licenses || [];
-    
+
     updatePageFormData(pageUrl, {
       rsl: {
         ...currentRsl,
         licenses: [...currentLicenses, newLicense]
       }
     });
-    
+
     // Set the new license as active
     setActiveLicenseTab(prev => ({ ...prev, [pageUrl]: newLicense.id }));
   };
@@ -279,14 +279,14 @@ export default function RSLReviewPage() {
     const currentRsl = getCurrentRslData(pageUrl);
     const currentLicenses = currentRsl?.licenses || [];
     const filteredLicenses = currentLicenses.filter(l => l.id !== licenseId);
-    
+
     updatePageFormData(pageUrl, {
       rsl: {
         ...currentRsl,
         licenses: filteredLicenses
       }
     });
-    
+
     // If we removed the active license, switch to the first one
     if (activeLicenseTab[pageUrl] === licenseId && filteredLicenses.length > 0) {
       setActiveLicenseTab(prev => ({ ...prev, [pageUrl]: filteredLicenses[0].id }));
@@ -311,11 +311,11 @@ export default function RSLReviewPage() {
     const currentRsl = getCurrentRslData(pageUrl);
     const currentLicenses = getCurrentLicenses(pageUrl);
     const activeId = activeLicenseTab[pageUrl] || currentLicenses[0]?.id;
-    
+
     const updatedLicenses = currentLicenses.map(license =>
       license.id === activeId ? { ...license, ...licenseData } : license
     );
-    
+
     updatePageFormData(pageUrl, {
       rsl: {
         ...currentRsl,
@@ -357,17 +357,17 @@ export default function RSLReviewPage() {
   useEffect(() => {
     const fetchRslData = async () => {
       if (!rslId) return;
-      
+
       try {
         const response = await fetch(`/api/rsl/${rslId}`);
-        
+
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
             const rslData = result.data;
             setRsl(rslData);
             setGeneratedXml(rslData.xmlContent || '');
-            
+
             // Parse website URL to extract protocol and domain
             try {
               const urlObj = new URL(rslData.websiteUrl);
@@ -376,16 +376,16 @@ export default function RSLReviewPage() {
             } catch {
               setUrl(rslData.websiteUrl);
             }
-            
+
             // Parse XML content to populate configuration
             if (rslData.xmlContent) {
               const parsedLinks = parseXmlToConfig(rslData.xmlContent, rslData.websiteUrl);
               setCrawledLinks(parsedLinks);
-              
+
               // Set all URLs as expanded and set active license tabs
               const expandedSet = new Set(parsedLinks.map(link => link.url));
               setExpandedUrls(expandedSet);
-              
+
               const activeTabs: Record<string, string> = {};
               parsedLinks.forEach(link => {
                 const firstLicense = link.formData?.rsl?.licenses?.[0];
@@ -426,7 +426,7 @@ export default function RSLReviewPage() {
   // Generate RSL XML (same as create page)
   const generateRslXml = () => {
     const selectedLinks = crawledLinks.filter(link => link.selected && link.formData?.rsl);
-    
+
     if (selectedLinks.length === 0) {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <rsl xmlns="https://rslstandard.org/rsl">
@@ -437,17 +437,17 @@ export default function RSLReviewPage() {
     const contentElements = selectedLinks.map(link => {
       const rslData = link.formData!.rsl!;
       const licenses = rslData.licenses || [];
-      
+
       // Build content attributes
       let contentAttrs = `url="${link.url}"`;
       if (rslData.licenseServer) contentAttrs += ` server="${rslData.licenseServer}"`;
       if (rslData.encrypted) contentAttrs += ` encrypted="true"`;
       if (rslData.lastModified) contentAttrs += ` lastmod="${rslData.lastModified}"`;
-      
+
       // Build license elements
       const licenseElements = licenses.map(license => {
         let licenseContent = '';
-        
+
         // Permits
         if (license.permits?.usage?.length) {
           licenseContent += `    <permits type="usage">${license.permits.usage.join(',')}</permits>\n`;
@@ -458,7 +458,7 @@ export default function RSLReviewPage() {
         if (license.permits?.geo?.length) {
           licenseContent += `    <permits type="geo">${license.permits.geo.join(',')}</permits>\n`;
         }
-        
+
         // Prohibits
         if (license.prohibits?.usage?.length) {
           licenseContent += `    <prohibits type="usage">${license.prohibits.usage.join(',')}</prohibits>\n`;
@@ -469,7 +469,7 @@ export default function RSLReviewPage() {
         if (license.prohibits?.geo?.length) {
           licenseContent += `    <prohibits type="geo">${license.prohibits.geo.join(',')}</prohibits>\n`;
         }
-        
+
         // Payment
         if (license.payment?.type) {
           let paymentContent = '';
@@ -482,14 +482,14 @@ export default function RSLReviewPage() {
           if (license.payment.amount && license.payment.currency) {
             paymentContent += `      <amount currency="${license.payment.currency}">${license.payment.amount}</amount>\n`;
           }
-          
+
           if (paymentContent) {
             licenseContent += `    <payment type="${license.payment.type}">\n${paymentContent}    </payment>\n`;
           } else {
             licenseContent += `    <payment type="${license.payment.type}"/>\n`;
           }
         }
-        
+
         // Legal
         if (license.legal?.length) {
           license.legal.forEach(legal => {
@@ -498,10 +498,10 @@ export default function RSLReviewPage() {
             }
           });
         }
-        
+
         return `  <license>\n${licenseContent}  </license>`;
       }).join('\n');
-      
+
       // Build metadata elements
       let metadataElements = '';
       if (rslData.metadata?.schemaUrl) {
@@ -517,7 +517,7 @@ export default function RSLReviewPage() {
       if (rslData.metadata?.termsUrl) {
         metadataElements += `  <terms>${rslData.metadata.termsUrl}</terms>\n`;
       }
-      
+
       return `  <content ${contentAttrs}>
 ${licenseElements}
 ${metadataElements}  </content>`;
@@ -531,10 +531,10 @@ ${contentElements}
 
   const handleUpdateRsl = async () => {
     setIsGeneratingXml(true);
-    
+
     // Simulate loading time for better UX
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const xml = generateRslXml();
     setGeneratedXml(xml);
     setIsGeneratingXml(false);
@@ -548,16 +548,16 @@ ${contentElements}
       });
       return;
     }
-    
+
     if (!url) {
       toast.error("Missing website URL", {
         description: "Please enter a website URL before saving.",
       });
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const response = await fetch('/api/rsl', {
         method: 'POST',
@@ -661,16 +661,12 @@ ${contentElements}
           text="Generated RSL XML document based on your configuration"
         >
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setShowXmlView(false)}
             >
               <Icons.arrowLeft className="mr-2 size-4" />
               Back to Form
-            </Button>
-            <Button>
-              <Icons.help className="mr-2 size-4" />
-              Learn more
             </Button>
           </div>
         </DashboardHeader>
@@ -699,8 +695,8 @@ ${contentElements}
                       <Icons.copy className="size-4" />
                     </Button>
                     <div className="p-4 pr-16">
-                      <HighlightedXml 
-                        code={generatedXml} 
+                      <HighlightedXml
+                        code={generatedXml}
                         className="text-sm leading-relaxed"
                       />
                     </div>
@@ -711,7 +707,7 @@ ${contentElements}
           </div>
 
           {/* Right Sidebar - Actions */}
-          <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
+          <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{ backgroundColor: 'rgb(244, 244, 245)' }}>
             <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -728,27 +724,27 @@ ${contentElements}
                       {`${protocol}://${url}`}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Document size:</span>
                     <span className="font-medium">
                       {(new Blob([generatedXml]).size / 1024).toFixed(1)} KB
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Content URLs:</span>
                     <span className="font-medium">
                       {crawledLinks.filter(link => link.selected).length}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Total licenses:</span>
                     <span className="font-medium">
                       {crawledLinks
                         .filter(link => link.selected && link.formData?.rsl)
-                        .reduce((total, link) => 
+                        .reduce((total, link) =>
                           total + (link.formData?.rsl?.licenses?.length || 0), 0
                         )}
                     </span>
@@ -758,7 +754,7 @@ ${contentElements}
                 {/* Primary Actions */}
                 <div className="space-y-4 border-t pt-4">
                   <h4 className="text-sm font-medium text-muted-foreground">Primary Actions</h4>
-                  
+
                   <Button
                     onClick={handleSaveRsl}
                     disabled={isSaving || !generatedXml || !url}
@@ -777,7 +773,7 @@ ${contentElements}
                       </>
                     )}
                   </Button>
-                  
+
                   <Button
                     onClick={() => {
                       const blob = new Blob([generatedXml], { type: 'application/xml' });
@@ -804,7 +800,7 @@ ${contentElements}
                 {/* Secondary Actions */}
                 <div className="space-y-3 border-t pt-4">
                   <h4 className="text-sm font-medium text-muted-foreground">Additional Options</h4>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -817,7 +813,7 @@ ${contentElements}
                     <Icons.copy className="mr-2 size-4" />
                     Copy to Clipboard
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -866,10 +862,6 @@ ${contentElements}
               Back
             </Button>
           </Link>
-          <Button>
-            <Icons.help className="mr-2 size-4" />
-            Learn more
-          </Button>
         </div>
       </DashboardHeader>
 
@@ -890,7 +882,7 @@ ${contentElements}
                     <TabsTrigger value="sitemap">Sitemap</TabsTrigger>
                     <TabsTrigger value="individual">Individual link</TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="edit" className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="url">URL</Label>
@@ -904,7 +896,7 @@ ${contentElements}
                             <SelectItem value="http">http://</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Input 
+                        <Input
                           id="url"
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
@@ -913,7 +905,7 @@ ${contentElements}
                         />
                       </div>
                     </div>
-                    
+
                     <div className="rounded-lg bg-muted/50 p-4">
                       <div className="flex items-start gap-2">
                         <Icons.info className="mt-0.5 size-4 text-muted-foreground" />
@@ -923,7 +915,7 @@ ${contentElements}
                       </div>
                     </div>
                   </TabsContent>
-                  
+
                   <TabsContent value="sitemap" className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="sitemap-url">Sitemap URL</Label>
@@ -937,7 +929,7 @@ ${contentElements}
                             <SelectItem value="http">http://</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Input 
+                        <Input
                           id="sitemap-url"
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
@@ -947,7 +939,7 @@ ${contentElements}
                       </div>
                     </div>
                   </TabsContent>
-                  
+
                   <TabsContent value="individual" className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="individual-url">Individual URL</Label>
@@ -961,7 +953,7 @@ ${contentElements}
                             <SelectItem value="http">http://</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Input 
+                        <Input
                           id="individual-url"
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
@@ -995,7 +987,7 @@ ${contentElements}
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Checkbox 
+                      <Checkbox
                         checked={crawledLinks.every(link => link.selected)}
                         onCheckedChange={toggleSelectAll}
                       />
@@ -1021,12 +1013,12 @@ ${contentElements}
                     {filteredLinks.map((link) => (
                       <div key={link.id} className="rounded-lg border">
                         {/* URL Header */}
-                        <div 
+                        <div
                           className="flex cursor-pointer items-center justify-between p-3 transition-colors hover:bg-muted/50"
                           onClick={() => toggleUrlExpanded(link.url)}
                         >
                           <div className="flex min-w-0 flex-1 items-center gap-3">
-                            <Checkbox 
+                            <Checkbox
                               checked={link.selected}
                               onCheckedChange={() => toggleLinkSelection(link.url)}
                               onClick={(e) => e.stopPropagation()}
@@ -1040,12 +1032,12 @@ ${contentElements}
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
                             <Icons.chevronDown className={cn(
-                              "size-4 text-muted-foreground transition-transform", 
+                              "size-4 text-muted-foreground transition-transform",
                               expandedUrls.has(link.url) && "rotate-180"
                             )} />
                           </div>
                         </div>
-                        
+
                         {/* Form Section */}
                         {expandedUrls.has(link.url) && (
                           <div className="border-t bg-muted/30 p-4">
@@ -1070,14 +1062,14 @@ ${contentElements}
                                       <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                           <Label htmlFor={`license-server-${link.id}`}>License Server URL</Label>
-                                          <Input 
+                                          <Input
                                             id={`license-server-${link.id}`}
                                             placeholder="https://license.example.com"
                                             value={getCurrentRslData(link.url)?.licenseServer || ""}
-                                            onChange={(e) => updatePageFormData(link.url, { 
-                                              rsl: { 
+                                            onChange={(e) => updatePageFormData(link.url, {
+                                              rsl: {
                                                 ...getCurrentRslData(link.url),
-                                                licenseServer: e.target.value 
+                                                licenseServer: e.target.value
                                               }
                                             })}
                                           />
@@ -1091,10 +1083,10 @@ ${contentElements}
                                             })()}
                                             onDateChange={(date) => {
                                               const rfc3339 = date ? date.toISOString() : "";
-                                              updatePageFormData(link.url, { 
-                                                rsl: { 
+                                              updatePageFormData(link.url, {
+                                                rsl: {
                                                   ...getCurrentRslData(link.url),
-                                                  lastModified: rfc3339 
+                                                  lastModified: rfc3339
                                                 }
                                               });
                                             }}
@@ -1103,13 +1095,13 @@ ${contentElements}
                                         </div>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <Switch 
+                                        <Switch
                                           id={`encrypted-${link.id}`}
                                           checked={getCurrentRslData(link.url)?.encrypted || false}
-                                          onCheckedChange={(checked) => updatePageFormData(link.url, { 
-                                            rsl: { 
+                                          onCheckedChange={(checked) => updatePageFormData(link.url, {
+                                            rsl: {
                                               ...getCurrentRslData(link.url),
-                                              encrypted: checked 
+                                              encrypted: checked
                                             }
                                           })}
                                         />
@@ -1140,7 +1132,7 @@ ${contentElements}
                                     <CardContent>
                                       {(() => {
                                         const licenses = getCurrentLicenses(link.url);
-                                        
+
                                         if (licenses.length === 0) {
                                           return (
                                             <div className="px-4 py-8 text-center">
@@ -1172,8 +1164,8 @@ ${contentElements}
                                                     >
                                                       {license.name || `License ${licenses.indexOf(license) + 1}`}
                                                     </Button>
-                                                    <Button 
-                                                      variant="ghost" 
+                                                    <Button
+                                                      variant="ghost"
                                                       size="sm"
                                                       onClick={() => removeLicense(link.url, license.id)}
                                                       className="h-8 rounded-l-none border-l px-2 hover:bg-destructive hover:text-destructive-foreground"
@@ -1197,7 +1189,7 @@ ${contentElements}
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                   <div className="space-y-2">
                                                     <Label htmlFor={`license-name-${link.id}`} className="text-sm font-medium">License Name</Label>
-                                                    <Input 
+                                                    <Input
                                                       id={`license-name-${link.id}`}
                                                       placeholder="e.g., Commercial License"
                                                       value={currentLicense.name || ""}
@@ -1207,9 +1199,9 @@ ${contentElements}
                                                   </div>
                                                   <div className="space-y-2">
                                                     <Label htmlFor={`payment-type-${link.id}`} className="text-sm font-medium">Payment Type</Label>
-                                                    <Select 
+                                                    <Select
                                                       value={currentLicense.payment?.type || "free"}
-                                                      onValueChange={(value: any) => updateCurrentLicense(link.url, { 
+                                                      onValueChange={(value: any) => updateCurrentLicense(link.url, {
                                                         payment: { ...currentLicense.payment, type: value }
                                                       })}
                                                     >
@@ -1246,18 +1238,18 @@ ${contentElements}
                                                     { id: "search", label: "Search" }
                                                   ].map((usage) => (
                                                     <div key={usage.id} className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                                                      <Checkbox 
+                                                      <Checkbox
                                                         id={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
                                                         checked={currentLicense.permits?.usage?.includes(usage.id) || false}
                                                         onCheckedChange={(checked) => {
                                                           const currentUsage = currentLicense.permits?.usage || [];
-                                                          const newUsage = checked 
+                                                          const newUsage = checked
                                                             ? [...currentUsage, usage.id]
                                                             : currentUsage.filter(u => u !== usage.id);
-                                                          updateCurrentLicense(link.url, { 
-                                                            permits: { 
-                                                              ...currentLicense.permits, 
-                                                              usage: newUsage 
+                                                          updateCurrentLicense(link.url, {
+                                                            permits: {
+                                                              ...currentLicense.permits,
+                                                              usage: newUsage
                                                             }
                                                           });
                                                         }}
@@ -1282,7 +1274,7 @@ ${contentElements}
                                 <p className="text-sm">
                                   Select this URL to configure RSL licensing properties.
                                 </p>
-                                <Button 
+                                <Button
                                   className="mt-3"
                                   size="sm"
                                   onClick={(e) => {
@@ -1306,7 +1298,7 @@ ${contentElements}
         </div>
 
         {/* Right Sidebar - Sources */}
-        <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{backgroundColor: 'rgb(244, 244, 245)'}}>
+        <div className="sticky top-0 h-screen w-2/5 overflow-y-auto p-6" style={{ backgroundColor: 'rgb(244, 244, 245)' }}>
           <Card className="border-0 bg-transparent shadow-none">
             <CardHeader>
               <CardTitle>Document Status</CardTitle>
@@ -1321,39 +1313,39 @@ ${contentElements}
                   <Icons.check className="size-3 text-green-600" />
                 </div>
               </div>
-              
+
               {/* RSL Configuration Summary */}
               {crawledLinks.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">RSL Configuration</span>
                   </div>
-                  
+
                   <div className="space-y-2 text-xs">
                     {(() => {
                       const selectedLinks = crawledLinks.filter(link => link.selected);
-                      const configuredLinks = selectedLinks.filter(link => 
-                        link.formData?.rsl && 
+                      const configuredLinks = selectedLinks.filter(link =>
+                        link.formData?.rsl &&
                         (link.formData.rsl.licenses?.length || 0) > 0
                       );
-                      
+
                       return (
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">URLs selected:</span>
                             <span className="font-medium">{selectedLinks.length}</span>
                           </div>
-                        
+
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">URLs configured:</span>
                             <span className="font-medium">{configuredLinks.length}</span>
                           </div>
-                        
+
                           {configuredLinks.length > 0 && (
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Total licenses:</span>
                               <span className="font-medium">
-                                {configuredLinks.reduce((total, link) => 
+                                {configuredLinks.reduce((total, link) =>
                                   total + (link.formData?.rsl?.licenses?.length || 0), 0
                                 )}
                               </span>
@@ -1365,9 +1357,9 @@ ${contentElements}
                   </div>
                 </div>
               )}
-              
-              <Button 
-                className="w-full bg-black text-white hover:bg-black/90" 
+
+              <Button
+                className="w-full bg-black text-white hover:bg-black/90"
                 size="lg"
                 onClick={handleUpdateRsl}
                 disabled={isGeneratingXml}

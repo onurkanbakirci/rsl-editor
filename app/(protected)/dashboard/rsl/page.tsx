@@ -216,7 +216,7 @@ export default function RSLPage() {
   };
 
   const handleCardClick = (rsl: RSL) => {
-    router.push(`/dashboard/rsl/${rsl.id}`);
+    router.push(`/dashboard/rsl/${rsl.id}/edit`);
   };
 
   if (loading) {
