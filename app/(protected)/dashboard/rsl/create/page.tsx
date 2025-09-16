@@ -80,24 +80,12 @@ interface CrawledLink {
 
 // All crawling is now handled server-side
 
-interface InitialRSLData {
-  websiteUrl?: string;
-  xmlContent?: string;
-  crawledLinks?: CrawledLink[];
-  rslId?: string;
-}
+// Removed InitialRSLData interface - not needed for create-only page
 
-interface CreateRSLPageProps {
-  initialData?: InitialRSLData;
-}
-
-export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) {
-  // Determine if we're in editing mode
-  const isEditMode = Boolean(initialData?.rslId);
-  
-  // Initialize state with provided initial data
+export default function CreateRSLPage() {
+  // Initialize state for create mode only
   const [isCrawling, setIsCrawling] = useState(false);
-  const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>(initialData?.crawledLinks || []);
+  const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
   const [crawlSummary, setCrawlSummary] = useState<{
     totalPages: number;
     totalSize: number; 
@@ -108,61 +96,21 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   
-  // Initialize URL and protocol from initial data
-  const [url, setUrl] = useState(() => {
-    if (initialData?.websiteUrl) {
-      try {
-        const urlObj = new URL(initialData.websiteUrl);
-        return urlObj.host;
-      } catch {
-        return initialData.websiteUrl;
-      }
-    }
-    return "";
-  });
-  
-  const [protocol, setProtocol] = useState(() => {
-    if (initialData?.websiteUrl) {
-      try {
-        const urlObj = new URL(initialData.websiteUrl);
-        return urlObj.protocol.replace(':', '');
-      } catch {
-        return "https";
-      }
-    }
-    return "https";
-  });
+  // Initialize URL and protocol for create mode
+  const [url, setUrl] = useState("");
+  const [protocol, setProtocol] = useState("https");
   
   const [showPlanLimitModal, setShowPlanLimitModal] = useState(false);
   // Removed linkCount - using actual crawled data now
   const [isLinksExpanded, setIsLinksExpanded] = useState(false);
-  const [showCrawledLinks, setShowCrawledLinks] = useState(Boolean(initialData?.crawledLinks?.length));
+  const [showCrawledLinks, setShowCrawledLinks] = useState(false);
   const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
   
-  // Expand all URLs in edit mode and set active license tabs
-  const [expandedUrls, setExpandedUrls] = useState<Set<string>>(() => {
-    if (isEditMode && initialData?.crawledLinks) {
-      return new Set(initialData.crawledLinks.map(link => link.url));
-    }
-    return new Set();
-  });
-  
-  const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>(() => {
-    if (isEditMode && initialData?.crawledLinks) {
-      const tabs: Record<string, string> = {};
-      initialData.crawledLinks.forEach(link => {
-        const firstLicense = link.formData?.rsl?.licenses?.[0];
-        if (firstLicense) {
-          tabs[link.url] = firstLicense.id;
-        }
-      });
-      return tabs;
-    }
-    return {};
-  });
-  
+  // URL expansion and license tab state for create mode
+  const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
+  const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
   const [showXmlPreview, setShowXmlPreview] = useState(false);
-  const [generatedXml, setGeneratedXml] = useState(initialData?.xmlContent || "");
+  const [generatedXml, setGeneratedXml] = useState("");
   const [isGeneratingXml, setIsGeneratingXml] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -209,54 +157,10 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
       }
 
         if (apiResult.success) {
-          // In edit mode, merge new links with existing ones
-          if (isEditMode) {
-            const newLinks = apiResult.links;
-            const existingLinks = crawledLinks;
-            
-            // Create a map of existing URLs for quick lookup
-            const existingUrlMap = new Map(existingLinks.map(link => [link.url, link]));
-            
-            // Merge logic: keep existing links with their configuration, add new ones
-            const mergedLinks: CrawledLink[] = [];
-            
-            // First, add all existing links (preserve their configuration)
-            existingLinks.forEach(existingLink => {
-              mergedLinks.push({
-                ...existingLink,
-                isNew: false, // Mark as existing
-              });
-            });
-            
-            // Then, add new links that don't exist yet
-            newLinks.forEach(newLink => {
-              if (!existingUrlMap.has(newLink.url)) {
-                mergedLinks.push({
-                  ...newLink,
-                  isNew: true, // Mark as new
-                  selected: false, // New links start unselected
-                });
-              }
-            });
-            
-            setCrawledLinks(mergedLinks);
-            
-            // Update summary to reflect merged results
-            const newLinksCount = mergedLinks.filter(link => link.isNew).length;
-            const updatedSummary = {
-              ...apiResult.summary,
-              message: `Found ${newLinksCount} new links. Existing configurations preserved.`,
-            };
-            setCrawlSummary(updatedSummary);
-            
-            toast.success(`Refetch complete! Found ${newLinksCount} new links.`);
-          } else {
-            // In create mode, replace all links as before
-            setCrawledLinks(apiResult.links);
-            setCrawlSummary(apiResult.summary);
-            toast.success(apiResult.summary.message);
-          }
-          
+          // Create mode - use new links directly
+          setCrawledLinks(apiResult.links);
+          setCrawlSummary(apiResult.summary);
+          toast.success(apiResult.summary.message);
           setShowCrawledLinks(true);
         } else {
         toast.error('Crawling failed', {
@@ -433,12 +337,9 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
     setIsSaving(true);
 
     try {
-      // Use PUT for updates, POST for new documents
-      const method = isEditMode ? "PUT" : "POST";
-      const endpoint = isEditMode ? `/api/rsl/${initialData?.rslId}` : "/api/rsl";
-      
-      const response = await fetch(endpoint, {
-        method,
+      // POST for new documents only (create mode)
+      const response = await fetch("/api/rsl", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -451,17 +352,16 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          toast.success(`RSL ${isEditMode ? 'updated' : 'saved'} successfully!`, {
-            description: `Your RSL document for ${protocol}://${url} has been ${isEditMode ? 'updated' : 'saved'}.`,
+          toast.success("RSL saved successfully!", {
+            description: `Your RSL document for ${protocol}://${url} has been saved.`,
           });
           // Optional: redirect to RSL list page after a delay
           // setTimeout(() => {
           //   window.location.href = '/dashboard/rsl';
           // }, 2000);
         } else {
-          toast.error(`Failed to ${isEditMode ? 'update' : 'save'} RSL`, {
-            description:
-              `There was an error ${isEditMode ? 'updating' : 'saving'} your RSL document. Please try again.`,
+          toast.error("Failed to save RSL", {
+            description: "There was an error saving your RSL document. Please try again.",
           });
         }
       } else {
@@ -470,7 +370,7 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
         });
       }
     } catch (error) {
-      console.error(`Error ${isEditMode ? 'updating' : 'saving'} RSL:`, error);
+      console.error("Error saving RSL:", error);
       toast.error("Network error", {
         description:
           "Unable to connect to the server. Please check your connection and try again.",
@@ -501,8 +401,8 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
     return (
       <>
         <DashboardHeader
-          heading={isEditMode ? "Edit RSL Document Preview" : "RSL Document Preview"}
-          text={isEditMode ? "Updated RSL XML document based on your configuration" : "Generated RSL XML document based on your configuration"}
+          heading="RSL Document Preview"
+          text="Generated RSL XML document based on your configuration"
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowXmlPreview(false)}>
@@ -627,7 +527,7 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
                     ) : (
                       <>
                         <Icons.save className="mr-2 size-4" />
-                        {isEditMode ? "Update RSL Document" : "Save RSL Document"}
+                        Save RSL Document
                       </>
                     )}
                   </Button>
@@ -719,8 +619,8 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
   return (
     <>
       <DashboardHeader
-        heading={isEditMode ? "Edit RSL" : "Create RSL"}
-        text={isEditMode ? "Update your RSL configuration and licensing options." : "Crawl web pages or submit sitemaps to update your AI with the latest content."}
+        heading="Create RSL"
+        text="Crawl web pages or submit sitemaps to update your AI with the latest content."
       >
         <div className="flex gap-2">
           <Link href="/dashboard/rsl">
@@ -779,10 +679,7 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
                       <div className="flex items-start gap-2">
                         <Icons.help className="mt-0.5 size-4 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          {isEditMode 
-                            ? "You are editing an existing RSL configuration. Click 'Refetch links' to discover new pages while preserving existing configurations."
-                            : "Links found during crawling or sitemap retrieval may be updated if new links are discovered or some links are invalid."
-                          }
+                          Links found during crawling or sitemap retrieval may be updated if new links are discovered or some links are invalid.
                         </p>
                       </div>
                     </div>
@@ -869,10 +766,10 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
                     {isCrawling ? (
                       <>
                         <Icons.spinner className="mr-2 size-4 animate-spin" />
-                        {isEditMode ? "Refetching..." : "Crawling..."}
+                        Crawling...
                       </>
                     ) : (
-                      isEditMode ? "Refetch links" : "Fetch links"
+                      "Fetch links"
                     )}
                   </Button>
                 </div>
@@ -962,25 +859,9 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
                                   </span>
                                   <Badge
                                     variant="secondary"
-                                    className={(() => {
-                                      if (isEditMode) {
-                                        // In edit mode, show different colors for new vs existing
-                                        return link.isNew
-                                          ? "shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700"
-                                          : "shrink-0 border-blue-200 bg-blue-500/10 text-xs text-blue-700";
-                                      } else {
-                                        // In create mode, all are new
-                                        return "shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700";
-                                      }
-                                    })()}
+                                    className="shrink-0 border-green-200 bg-green-500/10 text-xs text-green-700"
                                   >
-                                    {(() => {
-                                      if (isEditMode) {
-                                        return link.isNew ? "New" : "Existing";
-                                      } else {
-                                        return "New";
-                                      }
-                                    })()}
+                                    New
                                   </Badge>
                                 </div>
                               </div>
@@ -1509,7 +1390,7 @@ export default function CreateRSLPage({ initialData }: CreateRSLPageProps = {}) 
                     Generating...
                   </>
                 ) : (
-                  isEditMode ? "Update RSL" : "Create RSL"
+                  "Create RSL"
                 )}
               </Button>
             </CardContent>
