@@ -10,7 +10,7 @@ export const siteConfig: SiteConfig = {
   url: site_url,
   ogImage: `${site_url}/_static/og.png`,
   links: {
-    twitter: "https://twitter.com/onurkanbakirci",
+    twitter: "https://linkedin.com/in/onurkanbakırcı",
     github: "https://github.com/onurkanbakirci/rsl-editor",
   },
   mailSupport: "support@rsl.com",

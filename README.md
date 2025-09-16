@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://twitter.com/onurkanbakirci">
+  <a href="https://linkedin.com/in/onurkanbakırcı">
     <img src="https://img.shields.io/twitter/follow/onurkanbakirci?style=flat&label=onurkanbakirci&logo=twitter&color=0bf&logoColor=fff" alt="onurkanbakirci Twitter follower count" />
   </a>
   <a href="https://github.com/onurkanbakirci/rsl-editor">
@@ -90,4 +90,4 @@ RSL is an open standard designed to address the challenges of content licensing 
 
 ## Author
 
-Created by [@onurkanbakirci](https://twitter.com/onurkanbakirci) in 2025, released under the [MIT license](https://github.com/onurkanbakirci/rsl-editor/blob/main/LICENSE.md).
+Created by [@onurkanbakirci](https://linkedin.com/in/onurkanbakırcı) in 2025, released under the [MIT license](https://github.com/onurkanbakirci/rsl-editor/blob/main/LICENSE.md).
