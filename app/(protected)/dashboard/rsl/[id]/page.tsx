@@ -127,7 +127,13 @@ export default function RSLReviewPage() {
             name: `License Option ${licenseIndex + 1}`,
             permits: { usage: [], user: [], geo: [] },
             prohibits: { usage: [], user: [], geo: [] },
-            payment: { type: 'free' },
+            payment: { 
+              type: 'free',
+              standardUrls: [],
+              customUrl: "",
+              amount: "",
+              currency: "USD"
+            },
             legal: []
           };
 
@@ -257,7 +263,13 @@ export default function RSLReviewPage() {
       name: `License Option ${(getCurrentLicenses(pageUrl).length + 1)}`,
       permits: { usage: [], user: [], geo: [] },
       prohibits: { usage: [], user: [], geo: [] },
-      payment: { type: "free" as const },
+      payment: { 
+        type: "free" as const,
+        standardUrls: [],
+        customUrl: "",
+        amount: "",
+        currency: "USD"
+      },
       legal: []
     };
 

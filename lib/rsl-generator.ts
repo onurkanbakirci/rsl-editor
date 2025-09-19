@@ -27,6 +27,7 @@ export interface RslLicense {
 
 export interface RslMetadata {
   schemaUrl?: string;
+  copyrightHolder?: string;
   copyrightType?: "person" | "organization";
   contactEmail?: string;
   contactUrl?: string;
@@ -54,6 +55,7 @@ export interface EditableContent {
   licenses: RslLicense[];
   metadata: {
     schemaUrl: string;
+    copyrightHolder: string;
     copyrightType: "person" | "organization";
     contactEmail: string;
     contactUrl: string;
@@ -70,7 +72,13 @@ export function createNewLicense(existingLicensesCount: number = 0): RslLicense 
     name: `License Option ${existingLicensesCount + 1}`,
     permits: { usage: [], user: [], geo: [] },
     prohibits: { usage: [], user: [], geo: [] },
-    payment: { type: "free" as const },
+    payment: { 
+      type: "free" as const,
+      standardUrls: [],
+      customUrl: "",
+      amount: "",
+      currency: "USD"
+    },
     legal: [],
   };
 }
@@ -154,6 +162,8 @@ export function generateRslXml(contents: RslContent[]): string {
             license.legal.forEach((legal) => {
               if (legal.terms.length) {
                 licenseContent += `    <legal type="${legal.type}">${legal.terms.join(",")}</legal>\n`;
+              } else {
+                licenseContent += `    <legal type="${legal.type}"/>\n`;
               }
             });
           }
@@ -168,6 +178,7 @@ export function generateRslXml(contents: RslContent[]): string {
         metadataElements += `  <schema>${rslData.metadata.schemaUrl}</schema>\n`;
       }
       if (
+        rslData.metadata?.copyrightHolder ||
         rslData.metadata?.copyrightType ||
         rslData.metadata?.contactEmail ||
         rslData.metadata?.contactUrl
@@ -179,7 +190,12 @@ export function generateRslXml(contents: RslContent[]): string {
           copyrightAttrs += ` contactEmail="${rslData.metadata.contactEmail}"`;
         if (rslData.metadata.contactUrl)
           copyrightAttrs += ` contactUrl="${rslData.metadata.contactUrl}"`;
-        metadataElements += `  <copyright${copyrightAttrs}/>\n`;
+        
+        if (rslData.metadata.copyrightHolder) {
+          metadataElements += `  <copyright${copyrightAttrs}>${rslData.metadata.copyrightHolder}</copyright>\n`;
+        } else {
+          metadataElements += `  <copyright${copyrightAttrs}/>\n`;
+        }
       }
       if (rslData.metadata?.termsUrl) {
         metadataElements += `  <terms>${rslData.metadata.termsUrl}</terms>\n`;
@@ -233,16 +249,96 @@ export function validateRslData(contents: RslContent[]): {
 }
 
 /**
- * Helper function to get permitted usage types
+ * Helper function to get permitted usage types (according to RSL spec)
  */
-export function getAvailableUsageTypes(): Array<{ id: string; label: string }> {
+export function getAvailableUsageTypes(): Array<{ id: string; label: string; description: string }> {
   return [
-    { id: "all", label: "All Usage" },
-    { id: "train-ai", label: "Train AI" },
-    { id: "train-genai", label: "Train GenAI" },
-    { id: "ai-use", label: "AI Use" },
-    { id: "ai-summarize", label: "AI Summarize" },
-    { id: "search", label: "Search" },
+    { id: "all", label: "All Usage", description: "Any automated processing, including AI training and search" },
+    { id: "ai-train", label: "AI Training", description: "Training or fine-tuning AI models" },
+    { id: "ai-input", label: "AI Input", description: "Inputting content into AI models (RAG, grounding, etc.)" },
+    { id: "search", label: "Search Indexing", description: "Building search index and providing search results" },
+  ];
+}
+
+/**
+ * Helper function to get available user types
+ */
+export function getAvailableUserTypes(): Array<{ id: string; label: string; description: string }> {
+  return [
+    { id: "commercial", label: "Commercial", description: "General commercial use" },
+    { id: "non-commercial", label: "Non-Commercial", description: "Non-commercial purposes" },
+    { id: "education", label: "Educational", description: "Educational use in schools or universities" },
+    { id: "government", label: "Government", description: "Government or public sector purposes" },
+    { id: "personal", label: "Personal", description: "Individual or personal use only" },
+  ];
+}
+
+/**
+ * Helper function to get common country codes for geo restrictions
+ */
+export function getAvailableGeoCodes(): Array<{ id: string; label: string }> {
+  return [
+    { id: "US", label: "United States" },
+    { id: "EU", label: "European Union" },
+    { id: "GB", label: "United Kingdom" },
+    { id: "CA", label: "Canada" },
+    { id: "AU", label: "Australia" },
+    { id: "JP", label: "Japan" },
+    { id: "CN", label: "China" },
+    { id: "IN", label: "India" },
+    { id: "BR", label: "Brazil" },
+    { id: "DE", label: "Germany" },
+    { id: "FR", label: "France" },
+    { id: "IT", label: "Italy" },
+    { id: "ES", label: "Spain" },
+    { id: "NL", label: "Netherlands" },
+    { id: "SE", label: "Sweden" },
+    { id: "NO", label: "Norway" },
+    { id: "DK", label: "Denmark" },
+    { id: "FI", label: "Finland" },
+  ];
+}
+
+/**
+ * Helper function to get available legal warranty types
+ */
+export function getAvailableWarrantyTypes(): Array<{ id: string; label: string; description: string }> {
+  return [
+    { id: "ownership", label: "Ownership", description: "Licensor owns/controls copyright or exclusive licensing rights" },
+    { id: "authority", label: "Authority", description: "Licensor is authorized to grant the rights described" },
+    { id: "no-infringement", label: "No Infringement", description: "Asset does not infringe third-party IP" },
+    { id: "privacy-consent", label: "Privacy Consent", description: "Required consents for personal data have been obtained" },
+    { id: "no-malware", label: "No Malware", description: "Asset is free from malicious code" },
+  ];
+}
+
+/**
+ * Helper function to get available legal disclaimer types
+ */
+export function getAvailableDisclaimerTypes(): Array<{ id: string; label: string; description: string }> {
+  return [
+    { id: "as-is", label: "As Is", description: "Asset provided 'as is'" },
+    { id: "no-warranty", label: "No Warranty", description: "No express or implied warranties" },
+    { id: "no-liability", label: "No Liability", description: "Licensor disclaims liability for damages" },
+    { id: "no-indemnity", label: "No Indemnity", description: "Licensor does not provide indemnification" },
+  ];
+}
+
+/**
+ * Helper function to get available currency codes
+ */
+export function getAvailableCurrencies(): Array<{ id: string; label: string }> {
+  return [
+    { id: "USD", label: "US Dollar (USD)" },
+    { id: "EUR", label: "Euro (EUR)" },
+    { id: "GBP", label: "British Pound (GBP)" },
+    { id: "JPY", label: "Japanese Yen (JPY)" },
+    { id: "CAD", label: "Canadian Dollar (CAD)" },
+    { id: "AUD", label: "Australian Dollar (AUD)" },
+    { id: "CHF", label: "Swiss Franc (CHF)" },
+    { id: "CNY", label: "Chinese Yuan (CNY)" },
+    { id: "BTC", label: "Bitcoin (BTC)" },
+    { id: "ETH", label: "Ethereum (ETH)" },
   ];
 }
 
@@ -288,7 +384,13 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
           name: `License Option ${licenseIndex + 1}`,
           permits: { usage: [], user: [], geo: [] },
           prohibits: { usage: [], user: [], geo: [] },
-          payment: { type: 'free' },
+          payment: { 
+            type: 'free',
+            standardUrls: [],
+            customUrl: "",
+            amount: "",
+            currency: "USD"
+          },
           legal: []
         };
         
@@ -353,12 +455,14 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
       // Parse metadata
       const metadata: {
         schemaUrl: string;
+        copyrightHolder: string;
         copyrightType: "person" | "organization";
         contactEmail: string;
         contactUrl: string;
         termsUrl: string;
       } = {
         schemaUrl: '',
+        copyrightHolder: '',
         copyrightType: 'person',
         contactEmail: '',
         contactUrl: '',
@@ -375,6 +479,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
         const copyrightEl = copyrightElements[0];
         const copyrightType = copyrightEl.getAttribute('type');
         metadata.copyrightType = (copyrightType === 'organization') ? 'organization' : 'person';
+        metadata.copyrightHolder = copyrightEl.textContent || '';
         metadata.contactEmail = copyrightEl.getAttribute('contactEmail') || '';
         metadata.contactUrl = copyrightEl.getAttribute('contactUrl') || '';
       }
@@ -405,6 +510,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
       licenses: [createNewLicense()],
       metadata: {
         schemaUrl: '',
+        copyrightHolder: '',
         copyrightType: 'person',
         contactEmail: '',
         contactUrl: '',
@@ -421,6 +527,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
       licenses: [createNewLicense()],
       metadata: {
         schemaUrl: '',
+        copyrightHolder: '',
         copyrightType: 'person',
         contactEmail: '',
         contactUrl: '',

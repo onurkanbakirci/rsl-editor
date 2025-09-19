@@ -10,7 +10,12 @@ import {
   validateRslData,
   createNewLicense,
   getAvailableUsageTypes,
+  getAvailableUserTypes,
+  getAvailableGeoCodes,
   getAvailablePaymentTypes,
+  getAvailableWarrantyTypes,
+  getAvailableDisclaimerTypes,
+  getAvailableCurrencies,
   parseRslXmlToEditableContent,
   type RslContent,
   type RslLicense,
@@ -51,6 +56,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { HighlightedXml } from "@/components/shared/highlighted-xml";
 import { Icons } from "@/components/shared/icons";
@@ -70,6 +76,7 @@ interface CrawledLink {
       licenses?: RslLicense[];
       metadata?: {
         schemaUrl?: string;
+        copyrightHolder?: string;
         copyrightType?: "person" | "organization";
         contactEmail?: string;
         contactUrl?: string;
@@ -90,7 +97,7 @@ interface RSL {
 export default function EditRSLPage() {
   const params = useParams();
   const rslId = params.id as string;
-  
+
   // RSL data
   const [rsl, setRsl] = useState<RSL | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,23 +108,23 @@ export default function EditRSLPage() {
   const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
   const [crawlSummary, setCrawlSummary] = useState<{
     totalPages: number;
-    totalSize: number; 
+    totalSize: number;
     crawlTime: number;
     baseUrl: string;
     message: string;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
-  
+
   // Initialize URL and protocol for edit mode
   const [url, setUrl] = useState("");
   const [protocol, setProtocol] = useState("https");
-  
+
   const [showPlanLimitModal, setShowPlanLimitModal] = useState(false);
   const [isLinksExpanded, setIsLinksExpanded] = useState(false);
   const [showCrawledLinks, setShowCrawledLinks] = useState(false);
   const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
-  
+
   // URL expansion and license tab state for edit mode
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
@@ -131,15 +138,15 @@ export default function EditRSLPage() {
   useEffect(() => {
     const fetchRslData = async () => {
       if (!rslId) return;
-      
+
       try {
         const response = await fetch(`/api/rsl/${rslId}`);
-        
+
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
             setRsl(result.data);
-            
+
             // Parse the website URL
             const websiteUrl = result.data.websiteUrl;
             try {
@@ -149,7 +156,7 @@ export default function EditRSLPage() {
             } catch {
               setUrl(websiteUrl);
             }
-            
+
             // Parse existing RSL data into crawled links format
             const editableContent = parseRslXmlToEditableContent(result.data.xmlContent, result.data.websiteUrl);
             const existingLinks: CrawledLink[] = editableContent.map((content, index) => ({
@@ -167,10 +174,10 @@ export default function EditRSLPage() {
                 },
               },
             }));
-            
+
             setCrawledLinks(existingLinks);
             setShowCrawledLinks(true);
-            
+
             // Set active license tabs
             const initialTabs: Record<string, string> = {};
             existingLinks.forEach(link => {
@@ -179,7 +186,7 @@ export default function EditRSLPage() {
               }
             });
             setActiveLicenseTab(initialTabs);
-            
+
           } else {
             setError("Failed to load RSL data");
             toast.error("Failed to load RSL", {
@@ -218,10 +225,10 @@ export default function EditRSLPage() {
     try {
       // Construct the full URL
       const fullUrl = `${protocol}://${url}`;
-      
+
       // Determine crawling method based on current tab
       const activeTab = document.querySelector('[data-state="active"]')?.getAttribute('value') || 'crawl';
-      
+
       // Prepare crawl options for full website crawl
       const maxPages = parseInt((document.getElementById('max-pages') as HTMLInputElement)?.value || '100');
       const maxDepth = parseInt((document.getElementById('depth') as HTMLInputElement)?.value || '3');
@@ -248,7 +255,7 @@ export default function EditRSLPage() {
       });
 
       const apiResult = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(apiResult.error || 'API request failed');
       }
@@ -259,14 +266,14 @@ export default function EditRSLPage() {
           ...link,
           isNew: true, // Mark new links
         }));
-        
+
         // Combine existing and new links, avoiding duplicates
         const existingUrls = new Set(crawledLinks.map(link => link.url));
         const uniqueNewLinks = newLinks.filter((link: CrawledLink) => !existingUrls.has(link.url));
-        
+
         setCrawledLinks(prev => [...prev, ...uniqueNewLinks]);
         setCrawlSummary(apiResult.summary);
-        
+
         if (uniqueNewLinks.length > 0) {
           toast.success(`Added ${uniqueNewLinks.length} new links to your RSL`, {
             description: apiResult.summary.message,
@@ -276,7 +283,7 @@ export default function EditRSLPage() {
             description: "All discovered links are already in your RSL.",
           });
         }
-        
+
         setShowCrawledLinks(true);
       } else {
         toast.error('Crawling failed', {
@@ -322,9 +329,9 @@ export default function EditRSLPage() {
       prev.map((link) =>
         link.url === pageUrl
           ? {
-              ...link,
-              formData: { ...link.formData, ...formData },
-            }
+            ...link,
+            formData: { ...link.formData, ...formData },
+          }
           : link,
       ),
     );
@@ -336,10 +343,27 @@ export default function EditRSLPage() {
 
     const currentRsl = getCurrentRslData(pageUrl);
 
+    // Ensure metadata is properly initialized
+    const defaultMetadata = {
+      schemaUrl: '',
+      copyrightHolder: '',
+      copyrightType: 'person' as const,
+      contactEmail: '',
+      contactUrl: '',
+      termsUrl: ''
+    };
+
     updatePageFormData(pageUrl, {
       rsl: {
+        licenseServer: '',
+        encrypted: false,
+        lastModified: '',
         ...currentRsl,
         licenses: [...currentLicenses, newLicense],
+        metadata: {
+          ...defaultMetadata,
+          ...currentRsl?.metadata,
+        },
       },
     });
 
@@ -472,9 +496,9 @@ export default function EditRSLPage() {
             description: `Your RSL document for ${protocol}://${url} has been updated.`,
           });
           // Update local state
-          setRsl(prev => prev ? { 
-            ...prev, 
-            websiteUrl: `${protocol}://${url}`, 
+          setRsl(prev => prev ? {
+            ...prev,
+            websiteUrl: `${protocol}://${url}`,
             xmlContent: generatedXml,
             updatedAt: new Date().toISOString()
           } : null);
@@ -1243,213 +1267,156 @@ export default function EditRSLPage() {
                               <div className="border-t bg-muted/30 p-4">
                                 {link.selected ? (
                                   <div className="space-y-4">
-                                    <div className="mb-4">
-                                      <h4 className="flex items-center gap-2 text-sm font-semibold">
-                                        RSL Configuration
-                                      </h4>
-                                    </div>
+                                    {(() => {
+                                      const licenses = getCurrentLicenses(link.url);
+                                      const currentLicense = getCurrentLicense(link.url);
 
-                                    <div className="space-y-6">
-                                      {/* Content Settings Card */}
-                                      <Card className="shadow-sm">
-                                        <CardHeader className="pb-3">
-                                          <CardTitle className="flex items-center gap-2 text-sm">
-                                            <Icons.settings className="size-4" />
-                                            Content Settings
-                                          </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                          <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                              <Label
-                                                htmlFor={`license-server-${link.id}`}
-                                              >
-                                                License Server URL
-                                              </Label>
-                                              <Input
-                                                id={`license-server-${link.id}`}
-                                                placeholder="https://license.example.com"
-                                                value={
-                                                  getCurrentRslData(link.url)
-                                                    ?.licenseServer || ""
-                                                }
-                                                onChange={(e) =>
-                                                  updatePageFormData(link.url, {
-                                                    rsl: {
-                                                      ...getCurrentRslData(
-                                                        link.url,
-                                                      ),
-                                                      licenseServer:
-                                                        e.target.value,
-                                                    },
-                                                  })
-                                                }
-                                              />
-                                            </div>
-                                            <div className="space-y-2">
-                                              <Label
-                                                htmlFor={`lastmod-${link.id}`}
-                                              >
-                                                Last Modified
-                                              </Label>
-                                              <DatePicker
-                                                date={(() => {
-                                                  const lastMod =
-                                                    getCurrentRslData(
-                                                      link.url,
-                                                    )?.lastModified;
-                                                  return lastMod
-                                                    ? new Date(lastMod)
-                                                    : undefined;
-                                                })()}
-                                                onDateChange={(date) => {
-                                                  const rfc3339 = date
-                                                    ? date.toISOString()
-                                                    : "";
-                                                  updatePageFormData(link.url, {
-                                                    rsl: {
-                                                      ...getCurrentRslData(
-                                                        link.url,
-                                                      ),
-                                                      lastModified: rfc3339,
-                                                    },
-                                                  });
-                                                }}
-                                                placeholder="Select date"
-                                              />
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center space-x-2">
-                                            <Switch
-                                              id={`encrypted-${link.id}`}
-                                              checked={
-                                                getCurrentRslData(link.url)
-                                                  ?.encrypted || false
-                                              }
-                                              onCheckedChange={(checked) =>
-                                                updatePageFormData(link.url, {
-                                                  rsl: {
-                                                    ...getCurrentRslData(
-                                                      link.url,
-                                                    ),
-                                                    encrypted: checked,
-                                                  },
-                                                })
-                                              }
-                                            />
-                                            <Label
-                                              htmlFor={`encrypted-${link.id}`}
-                                              className="text-sm"
-                                            >
-                                              Content is encrypted
-                                            </Label>
-                                          </div>
-                                        </CardContent>
-                                      </Card>
+                                      return (
+                                        <div className="space-y-4">
+                                          {/* Tabbed Configuration Form */}
+                                          <div className="rounded-lg border bg-background">
+                                            <Tabs defaultValue="content-settings" className="w-full">
+                                              <TabsList className="grid w-full grid-cols-3">
+                                                <TabsTrigger value="content-settings">Content Settings</TabsTrigger>
+                                                <TabsTrigger value="license-management">License Management</TabsTrigger>
+                                                <TabsTrigger value="content-metadata">Content Metadata</TabsTrigger>
+                                              </TabsList>
 
-                                      {/* License Management Card */}
-                                      <Card className="shadow-sm">
-                                        <CardHeader className="pb-3">
-                                          <div className="flex items-center justify-between">
-                                            <CardTitle className="flex items-center gap-2 text-sm">
-                                              License Management
-                                            </CardTitle>
-                                            {getCurrentLicenses(link.url)
-                                              .length > 0 && (
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                  addLicense(link.url)
-                                                }
-                                              >
-                                                <Icons.add className="mr-1 size-4" />
-                                                Add License
-                                              </Button>
-                                            )}
-                                          </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                          {(() => {
-                                            const licenses = getCurrentLicenses(
-                                              link.url,
-                                            );
-
-                                            if (licenses.length === 0) {
-                                              return (
-                                                <div className="px-4 py-8 text-center">
-                                                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                                                    No licenses configured
-                                                  </h3>
-                                                  <p className="mb-4 text-xs text-muted-foreground">
-                                                    Create your first license to
-                                                    define usage rights for this
-                                                    content.
-                                                  </p>
-                                                  <Button
-                                                    onClick={() =>
-                                                      addLicense(link.url)
-                                                    }
-                                                    size="sm"
-                                                  >
-                                                    <Icons.add className="mr-1 size-4" />
-                                                    Create First License
-                                                  </Button>
+                                              {/* Content Settings Tab */}
+                                              <TabsContent value="content-settings" className="p-4 space-y-6">
+                                                {/* Content Settings Header */}
+                                                <div className="flex items-center justify-between">
+                                                  <div>
+                                                    <h3 className="text-lg font-medium">Content Settings</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                      Configure server settings and content metadata
+                                                    </p>
+                                                  </div>
                                                 </div>
-                                              );
-                                            }
 
-                                            const currentLicense =
-                                              getCurrentLicense(link.url);
-                                            if (!currentLicense) return null;
+                                                <div className="space-y-4">
+                                                  <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`license-server-${link.id}`}>License Server URL</Label>
+                                                      <Input
+                                                        id={`license-server-${link.id}`}
+                                                        placeholder="https://license.example.com"
+                                                        value={getCurrentRslData(link.url)?.licenseServer || ""}
+                                                        onChange={(e) =>
+                                                          updatePageFormData(link.url, {
+                                                            rsl: {
+                                                              ...getCurrentRslData(link.url),
+                                                              licenseServer: e.target.value,
+                                                            },
+                                                          })
+                                                        }
+                                                      />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`lastmod-${link.id}`}>Last Modified</Label>
+                                                      <DatePicker
+                                                        date={(() => {
+                                                          const lastMod = getCurrentRslData(link.url)?.lastModified;
+                                                          return lastMod ? new Date(lastMod) : undefined;
+                                                        })()}
+                                                        onDateChange={(date) => {
+                                                          const rfc3339 = date ? date.toISOString() : "";
+                                                          updatePageFormData(link.url, {
+                                                            rsl: {
+                                                              ...getCurrentRslData(link.url),
+                                                              lastModified: rfc3339,
+                                                            },
+                                                          });
+                                                        }}
+                                                        placeholder="Select date"
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center space-x-2">
+                                                    <Switch
+                                                      id={`encrypted-${link.id}`}
+                                                      checked={getCurrentRslData(link.url)?.encrypted || false}
+                                                      onCheckedChange={(checked) =>
+                                                        updatePageFormData(link.url, {
+                                                          rsl: {
+                                                            ...getCurrentRslData(link.url),
+                                                            encrypted: checked,
+                                                          },
+                                                        })
+                                                      }
+                                                    />
+                                                    <Label htmlFor={`encrypted-${link.id}`} className="text-sm">
+                                                      Content is encrypted
+                                                    </Label>
+                                                  </div>
+                                                </div>
+                                              </TabsContent>
 
-                                            return (
-                                              <div className="space-y-4">
-                                                {/* License Tabs */}
-                                                {licenses.length > 1 && (
-                                                  <div className="flex flex-wrap gap-2 rounded-lg bg-muted/50 p-2">
-                                                    {licenses.map((license) => (
-                                                      <div
-                                                        key={license.id}
-                                                        className="flex items-center"
+                                              {/* License Management Tab */}
+                                              <TabsContent value="license-management" className="p-4 space-y-6">
+                                                {/* License Management Header */}
+                                                <div className="flex items-center justify-between">
+                                                  <div>
+                                                    <h3 className="text-lg font-medium">License Management</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                      Configure licensing options for this content
+                                                    </p>
+                                                  </div>
+                                                  <div className="flex gap-2">
+                                                    {licenses.length === 0 ? (
+                                                      <Button
+                                                        onClick={() => addLicense(link.url)}
+                                                        size="sm"
                                                       >
+                                                        <Icons.add className="mr-1 size-4" />
+                                                        Create First License
+                                                      </Button>
+                                                    ) : (
+                                                      <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => addLicense(link.url)}
+                                                      >
+                                                        <Icons.add className="mr-1 size-4" />
+                                                        Add License
+                                                      </Button>
+                                                    )}
+                                                  </div>
+                                                </div>
+
+                                                {/* License Tabs - only show if there are multiple licenses */}
+                                                {licenses.length > 1 && (
+                                                  <div className="flex flex-wrap gap-2 rounded-lg bg-muted/50 p-2 border">
+                                                    {licenses.map((license) => (
+                                                      <div key={license.id} className="flex items-center">
                                                         <Button
                                                           variant={
-                                                            activeLicenseTab[
-                                                              link.url
-                                                            ] === license.id
+                                                            activeLicenseTab[link.url] === license.id
                                                               ? "default"
                                                               : "ghost"
                                                           }
                                                           size="sm"
                                                           onClick={() =>
-                                                            setActiveLicenseTab(
-                                                              (prev) => ({
-                                                                ...prev,
-                                                                [link.url]:
-                                                                  license.id,
-                                                              }),
-                                                            )
+                                                            setActiveLicenseTab((prev) => ({
+                                                              ...prev,
+                                                              [link.url]: license.id,
+                                                            }))
                                                           }
-                                                          className="h-8 rounded-r-none"
+                                                          className={cn(
+                                                            "h-8 rounded-r-none border",
+                                                            activeLicenseTab[link.url] === license.id
+                                                              ? "border-primary"
+                                                              : "border-muted-foreground/20"
+                                                          )}
                                                         >
-                                                          {license.name ||
-                                                            `License ${licenses.indexOf(license) + 1}`}
+                                                          {license.name || `License ${licenses.indexOf(license) + 1}`}
                                                         </Button>
                                                         <Button
                                                           variant="ghost"
                                                           size="sm"
-                                                          onClick={() =>
-                                                            removeLicense(
-                                                              link.url,
-                                                              license.id,
-                                                            )
-                                                          }
-                                                          className="h-8 rounded-l-none border-l px-2 hover:bg-destructive hover:text-destructive-foreground"
-                                                          disabled={
-                                                            licenses.length ===
-                                                            1
-                                                          }
+                                                          onClick={() => removeLicense(link.url, license.id)}
+                                                          className="h-8 rounded-l-none border border-l-0 border-muted-foreground/20 px-2 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+                                                          disabled={licenses.length === 1}
                                                         >
                                                           <Icons.trash className="size-3" />
                                                         </Button>
@@ -1458,153 +1425,400 @@ export default function EditRSLPage() {
                                                   </div>
                                                 )}
 
-                                                {/* License Form */}
-                                                <div className="space-y-6 rounded-lg border bg-background p-4">
-                                                  {/* Basic License Info */}
-                                                  <div className="space-y-4">
-                                                    <div className="flex items-center gap-2 border-b pb-2">
-                                                      <Icons.edit className="size-4" />
-                                                      <h4 className="text-sm font-medium">
-                                                        Basic Information
-                                                      </h4>
+                                                {licenses.length === 0 ? (
+                                                  <div className="px-4 py-8 text-center">
+                                                    <div className="mx-auto mb-4 size-12 rounded-full bg-muted flex items-center justify-center">
+                                                      <Icons.scale className="size-6 text-muted-foreground" />
                                                     </div>
+                                                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                                                      No licenses configured
+                                                    </h3>
+                                                    <p className="mb-4 text-xs text-muted-foreground">
+                                                      Create your first license to define usage rights for this content.
+                                                    </p>
+                                                  </div>
+                                                ) : (
+                                                  <>
+                                                    {/* Basic License Setup */}
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`license-name-${link.id}`}>License Name</Label>
+                                                      <Input
+                                                        id={`license-name-${link.id}`}
+                                                        placeholder="e.g., Commercial License"
+                                                        value={currentLicense.name || ""}
+                                                        onChange={(e) =>
+                                                          updateCurrentLicense(link.url, {
+                                                            name: e.target.value,
+                                                          })
+                                                        }
+                                                      />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`payment-type-${link.id}`}>Payment Type</Label>
+                                                      <Select
+                                                        value={currentLicense.payment?.type || "free"}
+                                                        onValueChange={(value: any) =>
+                                                          updateCurrentLicense(link.url, {
+                                                            payment: {
+                                                              ...currentLicense.payment,
+                                                              type: value,
+                                                            },
+                                                          })
+                                                        }
+                                                      >
+                                                        <SelectTrigger>
+                                                          <SelectValue placeholder="Select payment type" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          {getAvailablePaymentTypes().map((paymentType) => (
+                                                            <SelectItem key={paymentType.value} value={paymentType.value}>
+                                                              {paymentType.label}
+                                                            </SelectItem>
+                                                          ))}
+                                                        </SelectContent>
+                                                      </Select>
+                                                    </div>
+
+                                                    {/* Payment Amount & Currency */}
+                                                    {currentLicense.payment?.type !== "free" && currentLicense.payment?.type !== "attribution" && (
+                                                      <div className="grid gap-4 sm:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                          <Label htmlFor={`amount-${link.id}`}>
+                                                            Amount <span className="text-red-500">*</span>
+                                                          </Label>
+                                                          <Input
+                                                            id={`amount-${link.id}`}
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            value={currentLicense.payment?.amount || ""}
+                                                            onChange={(e) =>
+                                                              updateCurrentLicense(link.url, {
+                                                                payment: {
+                                                                  ...currentLicense.payment,
+                                                                  amount: e.target.value,
+                                                                },
+                                                              })
+                                                            }
+                                                            required
+                                                          />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                          <Label htmlFor={`currency-${link.id}`}>
+                                                            Currency <span className="text-red-500">*</span>
+                                                          </Label>
+                                                          <Select
+                                                            value={currentLicense.payment?.currency || "USD"}
+                                                            onValueChange={(value) =>
+                                                              updateCurrentLicense(link.url, {
+                                                                payment: {
+                                                                  ...currentLicense.payment,
+                                                                  currency: value,
+                                                                },
+                                                              })
+                                                            }
+                                                          >
+                                                            <SelectTrigger>
+                                                              <SelectValue placeholder="Select currency" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                              {getAvailableCurrencies().map((currency) => (
+                                                                <SelectItem key={currency.id} value={currency.id}>
+                                                                  {currency.label}
+                                                                </SelectItem>
+                                                              ))}
+                                                            </SelectContent>
+                                                          </Select>
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {/* Usage Permissions */}
+                                                    <div className="space-y-2">
+                                                      <Label>Select permitted usage types</Label>
+                                                      <MultiSelect
+                                                        options={getAvailableUsageTypes().map(usage => ({
+                                                          value: usage.id,
+                                                          label: usage.label,
+                                                          description: usage.description
+                                                        }))}
+                                                        defaultValue={currentLicense.permits?.usage || []}
+                                                        onValueChange={(selectedUsage) => {
+                                                          updateCurrentLicense(link.url, {
+                                                            permits: {
+                                                              ...currentLicense.permits,
+                                                              usage: selectedUsage,
+                                                            },
+                                                          });
+                                                        }}
+                                                        placeholder="Select usage types..."
+                                                      />
+                                                    </div>
+
+                                                    {/* User Types */}
+                                                    <div className="space-y-2">
+                                                      <Label>Select permitted user types</Label>
+                                                      <MultiSelect
+                                                        options={getAvailableUserTypes().map(userType => ({
+                                                          value: userType.id,
+                                                          label: userType.label,
+                                                          description: userType.description
+                                                        }))}
+                                                        defaultValue={currentLicense.permits?.user || []}
+                                                        onValueChange={(selectedUsers) => {
+                                                          updateCurrentLicense(link.url, {
+                                                            permits: {
+                                                              ...currentLicense.permits,
+                                                              user: selectedUsers,
+                                                            },
+                                                          });
+                                                        }}
+                                                        placeholder="Select user types..."
+                                                      />
+                                                    </div>
+
+                                                    {/* Geographic Restrictions */}
+
+                                                    <div className="space-y-2">
+                                                      <Label>Restrict to specific countries (leave empty for worldwide)</Label>
+                                                      <MultiSelect
+                                                        options={getAvailableGeoCodes().map(geo => ({
+                                                          value: geo.id,
+                                                          label: geo.label,
+                                                        }))}
+                                                        defaultValue={currentLicense.permits?.geo || []}
+                                                        onValueChange={(selectedGeo) => {
+                                                          updateCurrentLicense(link.url, {
+                                                            permits: {
+                                                              ...currentLicense.permits,
+                                                              geo: selectedGeo,
+                                                            },
+                                                          });
+                                                        }}
+                                                        placeholder="Select countries/regions..."
+                                                      />
+                                                    </div>
+
+                                                    {/* Legal Warranties */}
+                                                    <div className="space-y-2">
+                                                      <Label>Legal Warranties</Label>
+                                                      <MultiSelect
+                                                        options={getAvailableWarrantyTypes().map(warranty => ({
+                                                          value: warranty.id,
+                                                          label: warranty.label,
+                                                          description: warranty.description
+                                                        }))}
+                                                        defaultValue={currentLicense.legal?.find(l => l.type === 'warranty')?.terms || []}
+                                                        onValueChange={(selectedWarranties) => {
+                                                          const updatedLegal = [...(currentLicense.legal || [])];
+                                                          const warrantyIndex = updatedLegal.findIndex(l => l.type === 'warranty');
+                                                          
+                                                          if (selectedWarranties.length > 0) {
+                                                            if (warrantyIndex >= 0) {
+                                                              updatedLegal[warrantyIndex] = { type: 'warranty', terms: selectedWarranties };
+                                                            } else {
+                                                              updatedLegal.push({ type: 'warranty', terms: selectedWarranties });
+                                                            }
+                                                          } else if (warrantyIndex >= 0) {
+                                                            updatedLegal.splice(warrantyIndex, 1);
+                                                          }
+                                                          
+                                                          updateCurrentLicense(link.url, {
+                                                            legal: updatedLegal,
+                                                          });
+                                                        }}
+                                                        placeholder="Select warranties..."
+                                                      />
+                                                    </div>
+
+                                                    {/* Legal Disclaimers */}
+                                                    <div className="space-y-2">
+                                                      <Label>Legal Disclaimers</Label>
+                                                      <MultiSelect
+                                                        options={getAvailableDisclaimerTypes().map(disclaimer => ({
+                                                          value: disclaimer.id,
+                                                          label: disclaimer.label,
+                                                          description: disclaimer.description
+                                                        }))}
+                                                        defaultValue={currentLicense.legal?.find(l => l.type === 'disclaimer')?.terms || []}
+                                                        onValueChange={(selectedDisclaimers) => {
+                                                          const updatedLegal = [...(currentLicense.legal || [])];
+                                                          const disclaimerIndex = updatedLegal.findIndex(l => l.type === 'disclaimer');
+                                                          
+                                                          if (selectedDisclaimers.length > 0) {
+                                                            if (disclaimerIndex >= 0) {
+                                                              updatedLegal[disclaimerIndex] = { type: 'disclaimer', terms: selectedDisclaimers };
+                                                            } else {
+                                                              updatedLegal.push({ type: 'disclaimer', terms: selectedDisclaimers });
+                                                            }
+                                                          } else if (disclaimerIndex >= 0) {
+                                                            updatedLegal.splice(disclaimerIndex, 1);
+                                                          }
+                                                          
+                                                          updateCurrentLicense(link.url, {
+                                                            legal: updatedLegal,
+                                                          });
+                                                        }}
+                                                        placeholder="Select disclaimers..."
+                                                      />
+                                                    </div>
+                                                  </>
+                                                )}
+                                              </TabsContent>
+
+                                              {/* Content Metadata Tab */}
+                                              <TabsContent value="content-metadata" className="p-4 space-y-6">
+                                                {/* Content Metadata Header */}
+                                                <div className="flex items-center justify-between">
+                                                  <div>
+                                                    <h3 className="text-lg font-medium">Content Metadata</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                      Define content metadata and copyright information
+                                                    </p>
+                                                  </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                  <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`schema-url-${link.id}`}>Schema.org URL</Label>
+                                                      <Input
+                                                        id={`schema-url-${link.id}`}
+                                                        placeholder="https://schema.org/CreativeWork"
+                                                        value={getCurrentRslData(link.url)?.metadata?.schemaUrl || ""}
+                                                        onChange={(e) =>
+                                                          updatePageFormData(link.url, {
+                                                            rsl: {
+                                                              ...getCurrentRslData(link.url),
+                                                              metadata: {
+                                                                ...getCurrentRslData(link.url)?.metadata,
+                                                                schemaUrl: e.target.value,
+                                                              },
+                                                            },
+                                                          })
+                                                        }
+                                                      />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                      <Label htmlFor={`terms-url-${link.id}`}>Terms URL</Label>
+                                                      <Input
+                                                        id={`terms-url-${link.id}`}
+                                                        placeholder="https://example.com/terms"
+                                                        value={getCurrentRslData(link.url)?.metadata?.termsUrl || ""}
+                                                        onChange={(e) =>
+                                                          updatePageFormData(link.url, {
+                                                            rsl: {
+                                                              ...getCurrentRslData(link.url),
+                                                              metadata: {
+                                                                ...getCurrentRslData(link.url)?.metadata,
+                                                                termsUrl: e.target.value,
+                                                              },
+                                                            },
+                                                          })
+                                                        }
+                                                      />
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="space-y-4">
                                                     <div className="grid gap-4 sm:grid-cols-2">
                                                       <div className="space-y-2">
-                                                        <Label
-                                                          htmlFor={`license-name-${link.id}`}
-                                                          className="text-sm font-medium"
-                                                        >
-                                                          License Name
-                                                        </Label>
+                                                        <Label htmlFor={`copyright-holder-${link.id}`}>Copyright Holder</Label>
                                                         <Input
-                                                          id={`license-name-${link.id}`}
-                                                          placeholder="e.g., Commercial License"
-                                                          value={
-                                                            currentLicense.name ||
-                                                            ""
-                                                          }
+                                                          id={`copyright-holder-${link.id}`}
+                                                          placeholder="John Doe or Example Corp"
+                                                          value={getCurrentRslData(link.url)?.metadata?.copyrightHolder || ""}
                                                           onChange={(e) =>
-                                                            updateCurrentLicense(
-                                                              link.url,
-                                                              {
-                                                                name: e.target
-                                                                  .value,
+                                                            updatePageFormData(link.url, {
+                                                              rsl: {
+                                                                ...getCurrentRslData(link.url),
+                                                                metadata: {
+                                                                  ...getCurrentRslData(link.url)?.metadata,
+                                                                  copyrightHolder: e.target.value,
+                                                                },
                                                               },
-                                                            )
+                                                            })
                                                           }
-                                                          className="h-9"
                                                         />
                                                       </div>
                                                       <div className="space-y-2">
-                                                        <Label
-                                                          htmlFor={`payment-type-${link.id}`}
-                                                          className="text-sm font-medium"
-                                                        >
-                                                          Payment Type
-                                                        </Label>
+                                                        <Label htmlFor={`copyright-type-${link.id}`}>Copyright Type</Label>
                                                         <Select
-                                                          value={
-                                                            currentLicense
-                                                              .payment?.type ||
-                                                            "free"
-                                                          }
-                                                          onValueChange={(
-                                                            value: any,
-                                                          ) =>
-                                                            updateCurrentLicense(
-                                                              link.url,
-                                                              {
-                                                                payment: {
-                                                                  ...currentLicense.payment,
-                                                                  type: value,
+                                                          value={getCurrentRslData(link.url)?.metadata?.copyrightType || "person"}
+                                                          onValueChange={(value: "person" | "organization") =>
+                                                            updatePageFormData(link.url, {
+                                                              rsl: {
+                                                                ...getCurrentRslData(link.url),
+                                                                metadata: {
+                                                                  ...getCurrentRslData(link.url)?.metadata,
+                                                                  copyrightType: value,
                                                                 },
                                                               },
-                                                            )
+                                                            })
                                                           }
                                                         >
-                                                          <SelectTrigger className="h-9">
-                                                            <SelectValue placeholder="Select payment type" />
+                                                          <SelectTrigger>
+                                                            <SelectValue placeholder="Select type" />
                                                           </SelectTrigger>
                                                           <SelectContent>
-                                            {getAvailablePaymentTypes().map((paymentType) => (
-                                              <SelectItem key={paymentType.value} value={paymentType.value}>
-                                                {paymentType.label}
-                                              </SelectItem>
-                                            ))}
+                                                            <SelectItem value="person">Person</SelectItem>
+                                                            <SelectItem value="organization">Organization</SelectItem>
                                                           </SelectContent>
                                                         </Select>
                                                       </div>
                                                     </div>
-                                                  </div>
 
-                                                  {/* Usage Permissions */}
-                                                  <div className="space-y-4">
-                                                    <div className="flex items-center gap-2 border-b pb-2">
-                                                      <Icons.check className="size-4 text-green-600" />
-                                                      <h4 className="text-sm font-medium">
-                                                        Permitted Usage
-                                                      </h4>
-                                                    </div>
-                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                      {getAvailableUsageTypes().map((usage) => (
-                                                        <div
-                                                          key={usage.id}
-                                                          className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                                                        >
-                                                          <Checkbox
-                                                            id={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
-                                                            checked={
-                                                              currentLicense.permits?.usage?.includes(
-                                                                usage.id,
-                                                              ) || false
-                                                            }
-                                                            onCheckedChange={(
-                                                              checked,
-                                                            ) => {
-                                                              const currentUsage =
-                                                                currentLicense
-                                                                  .permits
-                                                                  ?.usage || [];
-                                                              const newUsage =
-                                                                checked
-                                                                  ? [
-                                                                      ...currentUsage,
-                                                                      usage.id,
-                                                                    ]
-                                                                  : currentUsage.filter(
-                                                                      (u) =>
-                                                                        u !==
-                                                                        usage.id,
-                                                                    );
-                                                              updateCurrentLicense(
-                                                                link.url,
-                                                                {
-                                                                  permits: {
-                                                                    ...currentLicense.permits,
-                                                                    usage:
-                                                                      newUsage,
-                                                                  },
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                      <div className="space-y-2">
+                                                        <Label htmlFor={`contact-email-${link.id}`}>Contact Email</Label>
+                                                        <Input
+                                                          id={`contact-email-${link.id}`}
+                                                          type="email"
+                                                          placeholder="contact@example.com"
+                                                          value={getCurrentRslData(link.url)?.metadata?.contactEmail || ""}
+                                                          onChange={(e) =>
+                                                            updatePageFormData(link.url, {
+                                                              rsl: {
+                                                                ...getCurrentRslData(link.url),
+                                                                metadata: {
+                                                                  ...getCurrentRslData(link.url)?.metadata,
+                                                                  contactEmail: e.target.value,
                                                                 },
-                                                              );
-                                                            }}
-                                                          />
-                                                          <Label
-                                                            htmlFor={`permit-${usage.id}-${link.id}-${currentLicense.id}`}
-                                                            className="cursor-pointer text-sm font-medium"
-                                                          >
-                                                            {usage.label}
-                                                          </Label>
-                                                        </div>
-                                                      ))}
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      </div>
+                                                      <div className="space-y-2">
+                                                        <Label htmlFor={`contact-url-${link.id}`}>Contact URL</Label>
+                                                        <Input
+                                                          id={`contact-url-${link.id}`}
+                                                          placeholder="https://example.com/contact"
+                                                          value={getCurrentRslData(link.url)?.metadata?.contactUrl || ""}
+                                                          onChange={(e) =>
+                                                            updatePageFormData(link.url, {
+                                                              rsl: {
+                                                                ...getCurrentRslData(link.url),
+                                                                metadata: {
+                                                                  ...getCurrentRslData(link.url)?.metadata,
+                                                                  contactUrl: e.target.value,
+                                                                },
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      </div>
                                                     </div>
                                                   </div>
                                                 </div>
-                                              </div>
-                                            );
-                                          })()}
-                                        </CardContent>
-                                      </Card>
-                                    </div>
+                                              </TabsContent>
+                                            </Tabs>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 ) : (
                                   <div className="p-4 text-center text-muted-foreground">
@@ -1669,9 +1883,9 @@ export default function EditRSLPage() {
                   </div>
                 </div>
                 <div className="h-2 rounded-full bg-muted">
-                  <div 
-                    className="h-full rounded-full bg-primary transition-all duration-300" 
-                    style={{ 
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-300"
+                    style={{
                       width: crawlSummary ? '100%' : '100%' // Always show as loaded for existing RSL
                     }}
                   />
@@ -1778,7 +1992,7 @@ export default function EditRSLPage() {
                     "Update RSL"
                   )}
                 </Button>
-                
+
                 {rsl?.xmlContent && (
                   <Button
                     variant="outline"

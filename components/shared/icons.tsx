@@ -17,6 +17,7 @@ import {
   Eye,
   File,
   FileText,
+  Globe,
   HelpCircle,
   Home,
   Image,
@@ -34,12 +35,14 @@ import {
   Plus,
   Puzzle,
   Save,
+  Scale,
   Search,
   Settings,
   Shield,
   SunMedium,
   Trash,
   User,
+  Users,
   X,
 } from "lucide-react";
 import NextImage from "next/image";
@@ -61,6 +64,7 @@ export const Icons = {
   clock: Clock,
   close: X,
   copy: Copy,
+  creditCard: CreditCard,
   dashboard: LayoutPanelLeft,
   download: Download,
   edit: Edit,
@@ -118,6 +122,7 @@ export const Icons = {
     </svg>
   ),
   file: File,
+  globe: Globe,
   help: HelpCircle,
   home: Home,
   info: Info,
@@ -140,6 +145,7 @@ export const Icons = {
   page: File,
   post: FileText,
   save: Save,
+  scale: Scale,
   search: Search,
   settings: Settings,
   shield: Shield,
@@ -164,5 +170,6 @@ export const Icons = {
     </svg>
   ),
   user: User,
+  users: Users,
   warning: AlertTriangle,
 };
