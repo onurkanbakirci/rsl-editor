@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -96,6 +96,7 @@ interface RSL {
 
 export default function EditRSLPage() {
   const params = useParams();
+  const router = useRouter();
   const rslId = params.id as string;
 
   // RSL data
@@ -502,6 +503,8 @@ export default function EditRSLPage() {
             xmlContent: generatedXml,
             updatedAt: new Date().toISOString()
           } : null);
+          // Redirect to RSL list page after successful update
+          router.push('/dashboard/rsl');
         } else {
           toast.error("Failed to update RSL", {
             description: "There was an error updating your RSL document. Please try again.",
@@ -1614,7 +1617,7 @@ export default function EditRSLPage() {
                                                         onValueChange={(selectedWarranties) => {
                                                           const updatedLegal = [...(currentLicense.legal || [])];
                                                           const warrantyIndex = updatedLegal.findIndex(l => l.type === 'warranty');
-                                                          
+
                                                           if (selectedWarranties.length > 0) {
                                                             if (warrantyIndex >= 0) {
                                                               updatedLegal[warrantyIndex] = { type: 'warranty', terms: selectedWarranties };
@@ -1624,7 +1627,7 @@ export default function EditRSLPage() {
                                                           } else if (warrantyIndex >= 0) {
                                                             updatedLegal.splice(warrantyIndex, 1);
                                                           }
-                                                          
+
                                                           updateCurrentLicense(link.url, {
                                                             legal: updatedLegal,
                                                           });
@@ -1646,7 +1649,7 @@ export default function EditRSLPage() {
                                                         onValueChange={(selectedDisclaimers) => {
                                                           const updatedLegal = [...(currentLicense.legal || [])];
                                                           const disclaimerIndex = updatedLegal.findIndex(l => l.type === 'disclaimer');
-                                                          
+
                                                           if (selectedDisclaimers.length > 0) {
                                                             if (disclaimerIndex >= 0) {
                                                               updatedLegal[disclaimerIndex] = { type: 'disclaimer', terms: selectedDisclaimers };
@@ -1656,7 +1659,7 @@ export default function EditRSLPage() {
                                                           } else if (disclaimerIndex >= 0) {
                                                             updatedLegal.splice(disclaimerIndex, 1);
                                                           }
-                                                          
+
                                                           updateCurrentLicense(link.url, {
                                                             legal: updatedLegal,
                                                           });

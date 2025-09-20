@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -54,7 +55,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { HighlightedXml } from "@/components/shared/highlighted-xml";
@@ -90,6 +90,8 @@ interface CrawledLink {
 // Removed InitialRSLData interface - not needed for create-only page
 
 export default function CreateRSLPage() {
+  const router = useRouter();
+
   // Initialize state for create mode only
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawledLinks, setCrawledLinks] = useState<CrawledLink[]>([]);
@@ -379,10 +381,8 @@ export default function CreateRSLPage() {
           toast.success("RSL saved successfully!", {
             description: `Your RSL document for ${protocol}://${url} has been saved.`,
           });
-          // Optional: redirect to RSL list page after a delay
-          // setTimeout(() => {
-          //   window.location.href = '/dashboard/rsl';
-          // }, 2000);
+          // Redirect to RSL list page after successful save
+          router.push('/dashboard/rsl');
         } else {
           toast.error("Failed to save RSL", {
             description: "There was an error saving your RSL document. Please try again.",

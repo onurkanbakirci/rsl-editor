@@ -63,189 +63,663 @@ export interface EditableContent {
   };
 }
 
-/**
- * Creates a new license with default values
- */
-export function createNewLicense(existingLicensesCount: number = 0): RslLicense {
-  return {
-    id: `license-${Date.now()}`,
-    name: `License Option ${existingLicensesCount + 1}`,
-    permits: { usage: [], user: [], geo: [] },
-    prohibits: { usage: [], user: [], geo: [] },
-    payment: { 
-      type: "free" as const,
-      standardUrls: [],
-      customUrl: "",
-      amount: "",
-      currency: "USD"
-    },
-    legal: [],
-  };
-}
+// Factory Pattern Implementation for License Creation
 
 /**
- * Generates RSL XML document from content data
+ * Abstract base class for license factories
  */
-export function generateRslXml(contents: RslContent[]): string {
-  if (contents.length === 0) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<rsl xmlns="https://rslstandard.org/rsl">
-  <!-- No content selected for licensing -->
-</rsl>`;
+abstract class LicenseFactory {
+  protected generateId(): string {
+    return `license-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  const contentElements = contents
-    .map((content) => {
-      const rslData = content.rsl;
-      const licenses = rslData.licenses || [];
+  protected createBaseLicense(name: string): RslLicense {
+    return {
+      id: this.generateId(),
+      name,
+      permits: { usage: [], user: [], geo: [] },
+      prohibits: { usage: [], user: [], geo: [] },
+      payment: {
+        type: "free" as const,
+        standardUrls: [],
+        customUrl: "",
+        amount: "",
+        currency: "USD"
+      },
+      legal: [],
+    };
+  }
 
-      // Build content attributes
-      let contentAttrs = `url="${content.url}"`;
-      if (rslData.licenseServer)
-        contentAttrs += ` server="${rslData.licenseServer}"`;
-      if (rslData.encrypted) contentAttrs += ` encrypted="true"`;
-      if (rslData.lastModified)
-        contentAttrs += ` lastmod="${rslData.lastModified}"`;
-
-      // Build license elements
-      const licenseElements = licenses
-        .map((license) => {
-          let licenseContent = "";
-
-          // Permits
-          if (license.permits?.usage?.length) {
-            licenseContent += `    <permits type="usage">${license.permits.usage.join(",")}</permits>\n`;
-          }
-          if (license.permits?.user?.length) {
-            licenseContent += `    <permits type="user">${license.permits.user.join(",")}</permits>\n`;
-          }
-          if (license.permits?.geo?.length) {
-            licenseContent += `    <permits type="geo">${license.permits.geo.join(",")}</permits>\n`;
-          }
-
-          // Prohibits
-          if (license.prohibits?.usage?.length) {
-            licenseContent += `    <prohibits type="usage">${license.prohibits.usage.join(",")}</prohibits>\n`;
-          }
-          if (license.prohibits?.user?.length) {
-            licenseContent += `    <prohibits type="user">${license.prohibits.user.join(",")}</prohibits>\n`;
-          }
-          if (license.prohibits?.geo?.length) {
-            licenseContent += `    <prohibits type="geo">${license.prohibits.geo.join(",")}</prohibits>\n`;
-          }
-
-          // Payment
-          if (license.payment?.type) {
-            let paymentContent = "";
-            if (license.payment.standardUrls?.length) {
-              paymentContent +=
-                license.payment.standardUrls
-                  .map((url) => `      <standard>${url}</standard>`)
-                  .join("\n") + "\n";
-            }
-            if (license.payment.customUrl) {
-              paymentContent += `      <custom>${license.payment.customUrl}</custom>\n`;
-            }
-            if (license.payment.amount && license.payment.currency) {
-              paymentContent += `      <amount currency="${license.payment.currency}">${license.payment.amount}</amount>\n`;
-            }
-
-            if (paymentContent) {
-              licenseContent += `    <payment type="${license.payment.type}">\n${paymentContent}    </payment>\n`;
-            } else {
-              licenseContent += `    <payment type="${license.payment.type}"/>\n`;
-            }
-          }
-
-          // Legal
-          if (license.legal?.length) {
-            license.legal.forEach((legal) => {
-              if (legal.terms.length) {
-                licenseContent += `    <legal type="${legal.type}">${legal.terms.join(",")}</legal>\n`;
-              } else {
-                licenseContent += `    <legal type="${legal.type}"/>\n`;
-              }
-            });
-          }
-
-          return `  <license>\n${licenseContent}  </license>`;
-        })
-        .join("\n");
-
-      // Build metadata elements
-      let metadataElements = "";
-      if (rslData.metadata?.schemaUrl) {
-        metadataElements += `  <schema>${rslData.metadata.schemaUrl}</schema>\n`;
-      }
-      if (
-        rslData.metadata?.copyrightHolder ||
-        rslData.metadata?.copyrightType ||
-        rslData.metadata?.contactEmail ||
-        rslData.metadata?.contactUrl
-      ) {
-        let copyrightAttrs = "";
-        if (rslData.metadata.copyrightType)
-          copyrightAttrs += ` type="${rslData.metadata.copyrightType}"`;
-        if (rslData.metadata.contactEmail)
-          copyrightAttrs += ` contactEmail="${rslData.metadata.contactEmail}"`;
-        if (rslData.metadata.contactUrl)
-          copyrightAttrs += ` contactUrl="${rslData.metadata.contactUrl}"`;
-        
-        if (rslData.metadata.copyrightHolder) {
-          metadataElements += `  <copyright${copyrightAttrs}>${rslData.metadata.copyrightHolder}</copyright>\n`;
-        } else {
-          metadataElements += `  <copyright${copyrightAttrs}/>\n`;
-        }
-      }
-      if (rslData.metadata?.termsUrl) {
-        metadataElements += `  <terms>${rslData.metadata.termsUrl}</terms>\n`;
-      }
-
-      return `  <content ${contentAttrs}>
-${licenseElements}
-${metadataElements}  </content>`;
-    })
-    .join("\n");
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rsl xmlns="https://rslstandard.org/rsl">
-${contentElements}
-</rsl>`;
+  abstract createLicense(options?: any): RslLicense;
 }
 
 /**
- * Validates RSL data before generation
+ * Factory for creating free licenses
+ */
+class FreeLicenseFactory extends LicenseFactory {
+  createLicense(options: { name?: string; permits?: string[] } = {}): RslLicense {
+    const license = this.createBaseLicense(options.name || "Free License");
+
+    if (options.permits?.length) {
+      license.permits!.usage = options.permits;
+    }
+
+    return license;
+  }
+}
+
+/**
+ * Factory for creating commercial licenses
+ */
+class CommercialLicenseFactory extends LicenseFactory {
+  createLicense(options: {
+    name?: string;
+    amount?: string;
+    currency?: string;
+    paymentType?: "purchase" | "subscription";
+  } = {}): RslLicense {
+    const license = this.createBaseLicense(options.name || "Commercial License");
+
+    license.payment = {
+      type: options.paymentType || "purchase",
+      standardUrls: [],
+      customUrl: "",
+      amount: options.amount || "",
+      currency: options.currency || "USD"
+    };
+
+    // Add common commercial permits
+    license.permits!.usage = ["all"];
+    license.permits!.user = ["commercial"];
+
+    return license;
+  }
+}
+
+/**
+ * Factory for creating educational licenses
+ */
+class EducationalLicenseFactory extends LicenseFactory {
+  createLicense(options: { name?: string } = {}): RslLicense {
+    const license = this.createBaseLicense(options.name || "Educational License");
+
+    license.permits!.usage = ["ai-train", "search"];
+    license.permits!.user = ["education"];
+
+    // Add educational disclaimers
+    license.legal = [
+      { type: "disclaimer", terms: ["as-is", "no-warranty"] }
+    ];
+
+    return license;
+  }
+}
+
+/**
+ * Factory for creating research licenses
+ */
+class ResearchLicenseFactory extends LicenseFactory {
+  createLicense(options: { name?: string; nonCommercialOnly?: boolean } = {}): RslLicense {
+    const license = this.createBaseLicense(options.name || "Research License");
+
+    license.permits!.usage = ["ai-train", "ai-input"];
+    license.permits!.user = options.nonCommercialOnly ? ["non-commercial"] : ["education", "non-commercial"];
+
+    return license;
+  }
+}
+
+/**
+ * Main factory class that creates appropriate license factories
+ */
+export class LicenseFactoryManager {
+  private static factories = new Map<string, LicenseFactory>([
+    ['free', new FreeLicenseFactory()],
+    ['commercial', new CommercialLicenseFactory()],
+    ['educational', new EducationalLicenseFactory()],
+    ['research', new ResearchLicenseFactory()],
+  ]);
+
+  static createLicense(type: string, options?: any): RslLicense {
+    const factory = this.factories.get(type);
+    if (!factory) {
+      throw new Error(`Unknown license type: ${type}`);
+    }
+    return factory.createLicense(options);
+  }
+
+  static getAvailableTypes(): string[] {
+    return Array.from(this.factories.keys());
+  }
+}
+
+/**
+ * Creates a new license with default values (backward compatibility)
+ */
+export function createNewLicense(existingLicensesCount: number = 0): RslLicense {
+  return LicenseFactoryManager.createLicense('free', {
+    name: `License Option ${existingLicensesCount + 1}`
+  });
+}
+
+/**
+ * Creates a license of specific type with options
+ */
+export function createLicenseOfType(
+  type: 'free' | 'commercial' | 'educational' | 'research',
+  options?: any
+): RslLicense {
+  return LicenseFactoryManager.createLicense(type, options);
+}
+
+// Builder Pattern Implementation for RSL XML Generation
+
+/**
+ * Builder class for constructing RSL XML elements
+ */
+class RslXmlBuilder {
+  private xmlParts: string[] = [];
+  private indentLevel: number = 0;
+
+  private indent(): string {
+    return '  '.repeat(this.indentLevel);
+  }
+
+  private addLine(content: string): this {
+    this.xmlParts.push(this.indent() + content);
+    return this;
+  }
+
+  private addElement(tagName: string, content?: string, attributes?: Record<string, string>): this {
+    const attrs = attributes ?
+      Object.entries(attributes)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => ` ${key}="${value}"`)
+        .join('') : '';
+
+    if (content) {
+      this.addLine(`<${tagName}${attrs}>${content}</${tagName}>`);
+    } else {
+      this.addLine(`<${tagName}${attrs}/>`);
+    }
+    return this;
+  }
+
+  private openElement(tagName: string, attributes?: Record<string, string>): this {
+    const attrs = attributes ?
+      Object.entries(attributes)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => ` ${key}="${value}"`)
+        .join('') : '';
+
+    this.addLine(`<${tagName}${attrs}>`);
+    this.indentLevel++;
+    return this;
+  }
+
+  private closeElement(tagName: string): this {
+    this.indentLevel--;
+    this.addLine(`</${tagName}>`);
+    return this;
+  }
+
+  startDocument(): this {
+    this.xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
+    return this.openElement('rsl', { xmlns: 'https://rslstandard.org/rsl' });
+  }
+
+  addEmptyDocument(): this {
+    this.addLine('<!-- No content selected for licensing -->');
+    return this;
+  }
+
+  addContent(content: RslContent): this {
+    const rslData = content.rsl;
+    const attributes: Record<string, string> = { url: content.url };
+
+    if (rslData.licenseServer) attributes.server = rslData.licenseServer;
+    if (rslData.encrypted) attributes.encrypted = 'true';
+    if (rslData.lastModified) attributes.lastmod = rslData.lastModified;
+
+    this.openElement('content', attributes);
+
+    // Add licenses
+    if (rslData.licenses) {
+      rslData.licenses.forEach(license => this.addLicense(license));
+    }
+
+    // Add metadata
+    if (rslData.metadata) {
+      this.addMetadata(rslData.metadata);
+    }
+
+    return this.closeElement('content');
+  }
+
+  private addLicense(license: RslLicense): this {
+    this.openElement('license');
+
+    // Add permits
+    this.addPermissions('permits', license.permits);
+
+    // Add prohibits
+    this.addPermissions('prohibits', license.prohibits);
+
+    // Add payment
+    if (license.payment?.type) {
+      this.addPayment(license.payment);
+    }
+
+    // Add legal
+    if (license.legal?.length) {
+      license.legal.forEach(legal => this.addLegal(legal));
+    }
+
+    return this.closeElement('license');
+  }
+
+  private addPermissions(elementName: string, permissions?: { usage?: string[]; user?: string[]; geo?: string[] }): this {
+    if (!permissions) return this;
+
+    if (permissions.usage?.length) {
+      this.addElement(elementName, permissions.usage.join(','), { type: 'usage' });
+    }
+    if (permissions.user?.length) {
+      this.addElement(elementName, permissions.user.join(','), { type: 'user' });
+    }
+    if (permissions.geo?.length) {
+      this.addElement(elementName, permissions.geo.join(','), { type: 'geo' });
+    }
+
+    return this;
+  }
+
+  private addPayment(payment: NonNullable<RslLicense['payment']>): this {
+    const hasContent = payment.standardUrls?.length || payment.customUrl ||
+      (payment.amount && payment.currency);
+
+    const paymentType = payment.type || 'free';
+
+    if (hasContent) {
+      this.openElement('payment', { type: paymentType });
+
+      if (payment.standardUrls?.length) {
+        payment.standardUrls.forEach(url =>
+          this.addElement('standard', url)
+        );
+      }
+
+      if (payment.customUrl) {
+        this.addElement('custom', payment.customUrl);
+      }
+
+      if (payment.amount && payment.currency) {
+        this.addElement('amount', payment.amount, { currency: payment.currency });
+      }
+
+      this.closeElement('payment');
+    } else {
+      this.addElement('payment', undefined, { type: paymentType });
+    }
+
+    return this;
+  }
+
+  private addLegal(legal: { type: 'warranty' | 'disclaimer'; terms: string[] }): this {
+    if (legal.terms.length) {
+      this.addElement('legal', legal.terms.join(','), { type: legal.type });
+    } else {
+      this.addElement('legal', undefined, { type: legal.type });
+    }
+    return this;
+  }
+
+  private addMetadata(metadata: RslMetadata): this {
+    if (metadata.schemaUrl) {
+      this.addElement('schema', metadata.schemaUrl);
+    }
+
+    if (metadata.copyrightHolder || metadata.copyrightType ||
+      metadata.contactEmail || metadata.contactUrl) {
+      const attributes: Record<string, string> = {};
+
+      if (metadata.copyrightType) attributes.type = metadata.copyrightType;
+      if (metadata.contactEmail) attributes.contactEmail = metadata.contactEmail;
+      if (metadata.contactUrl) attributes.contactUrl = metadata.contactUrl;
+
+      this.addElement('copyright', metadata.copyrightHolder || undefined, attributes);
+    }
+
+    if (metadata.termsUrl) {
+      this.addElement('terms', metadata.termsUrl);
+    }
+
+    return this;
+  }
+
+  build(): string {
+    this.closeElement('rsl');
+    return this.xmlParts.join('\n');
+  }
+}
+
+/**
+ * Generates RSL XML document from content data using Builder pattern
+ */
+export function generateRslXml(contents: RslContent[]): string {
+  const builder = new RslXmlBuilder();
+
+  builder.startDocument();
+
+  if (contents.length === 0) {
+    builder.addEmptyDocument();
+  } else {
+    contents.forEach(content => builder.addContent(content));
+  }
+
+  return builder.build();
+}
+
+// Strategy Pattern Implementation for Validation
+
+/**
+ * Interface for validation strategies
+ */
+interface ValidationStrategy {
+  validate(contents: RslContent[]): ValidationResult[];
+}
+
+/**
+ * Validation result interface
+ */
+interface ValidationResult {
+  type: 'error' | 'warning' | 'info';
+  message: string;
+  context?: string;
+}
+
+/**
+ * Basic validation strategy - checks essential fields
+ */
+class BasicValidationStrategy implements ValidationStrategy {
+  validate(contents: RslContent[]): ValidationResult[] {
+    const results: ValidationResult[] = [];
+
+    if (contents.length === 0) {
+      results.push({
+        type: 'error',
+        message: 'No content provided for RSL generation'
+      });
+      return results;
+    }
+
+    contents.forEach((content, index) => {
+      if (!content.url) {
+        results.push({
+          type: 'error',
+          message: `Content at index ${index} is missing URL`
+        });
+      }
+
+      if (!content.rsl.licenses || content.rsl.licenses.length === 0) {
+        results.push({
+          type: 'error',
+          message: `Content "${content.url}" has no licenses configured`
+        });
+      }
+
+      content.rsl.licenses?.forEach((license, licenseIndex) => {
+        if (!license.id) {
+          results.push({
+            type: 'error',
+            message: `License at index ${licenseIndex} for "${content.url}" is missing ID`,
+            context: content.url
+          });
+        }
+      });
+    });
+
+    return results;
+  }
+}
+
+/**
+ * Comprehensive validation strategy - includes business logic validation
+ */
+class ComprehensiveValidationStrategy implements ValidationStrategy {
+  validate(contents: RslContent[]): ValidationResult[] {
+    const basicValidator = new BasicValidationStrategy();
+    const results = basicValidator.validate(contents);
+
+    // Add comprehensive validations
+    contents.forEach((content) => {
+      this.validateContent(content, results);
+    });
+
+    return results;
+  }
+
+  private validateContent(content: RslContent, results: ValidationResult[]): void {
+    const { rsl } = content;
+
+    // Validate URL format
+    if (content.url && !this.isValidUrl(content.url)) {
+      results.push({
+        type: 'warning',
+        message: `URL "${content.url}" may not be properly formatted`,
+        context: content.url
+      });
+    }
+
+    // Validate licenses
+    rsl.licenses?.forEach((license, index) => {
+      this.validateLicense(license, content.url, index, results);
+    });
+
+    // Validate metadata
+    if (rsl.metadata) {
+      this.validateMetadata(rsl.metadata, content.url, results);
+    }
+  }
+
+  private validateLicense(license: RslLicense, contentUrl: string, index: number, results: ValidationResult[]): void {
+    const context = `${contentUrl} - License ${index + 1}`;
+
+    // Check for conflicting permits and prohibits
+    if (license.permits && license.prohibits) {
+      const permitUsage = license.permits.usage || [];
+      const prohibitUsage = license.prohibits.usage || [];
+
+      const conflicts = permitUsage.filter(usage => prohibitUsage.includes(usage));
+      if (conflicts.length > 0) {
+        results.push({
+          type: 'error',
+          message: `License has conflicting permits and prohibits for usage: ${conflicts.join(', ')}`,
+          context
+        });
+      }
+    }
+
+    // Validate payment information
+    if (license.payment) {
+      this.validatePayment(license.payment, context, results);
+    }
+
+    // Check for empty permits and prohibits
+    const hasPermits = license.permits && (
+      (license.permits.usage?.length || 0) > 0 ||
+      (license.permits.user?.length || 0) > 0 ||
+      (license.permits.geo?.length || 0) > 0
+    );
+
+    const hasProhibits = license.prohibits && (
+      (license.prohibits.usage?.length || 0) > 0 ||
+      (license.prohibits.user?.length || 0) > 0 ||
+      (license.prohibits.geo?.length || 0) > 0
+    );
+
+    if (!hasPermits && !hasProhibits) {
+      results.push({
+        type: 'warning',
+        message: 'License has no permits or prohibits defined',
+        context
+      });
+    }
+  }
+
+  private validatePayment(payment: NonNullable<RslLicense['payment']>, context: string, results: ValidationResult[]): void {
+    if (payment.type !== 'free') {
+      if (!payment.amount && !payment.customUrl && !payment.standardUrls?.length) {
+        results.push({
+          type: 'warning',
+          message: `Payment type "${payment.type}" specified but no payment details provided`,
+          context
+        });
+      }
+
+      if (payment.amount && !payment.currency) {
+        results.push({
+          type: 'error',
+          message: 'Payment amount specified but currency is missing',
+          context
+        });
+      }
+    }
+
+    // Validate URLs
+    payment.standardUrls?.forEach((url, index) => {
+      if (!this.isValidUrl(url)) {
+        results.push({
+          type: 'warning',
+          message: `Standard payment URL ${index + 1} may not be properly formatted: ${url}`,
+          context
+        });
+      }
+    });
+
+    if (payment.customUrl && !this.isValidUrl(payment.customUrl)) {
+      results.push({
+        type: 'warning',
+        message: `Custom payment URL may not be properly formatted: ${payment.customUrl}`,
+        context
+      });
+    }
+  }
+
+  private validateMetadata(metadata: RslMetadata, contentUrl: string, results: ValidationResult[]): void {
+    const context = `${contentUrl} - Metadata`;
+
+    // Validate URLs
+    if (metadata.schemaUrl && !this.isValidUrl(metadata.schemaUrl)) {
+      results.push({
+        type: 'warning',
+        message: `Schema URL may not be properly formatted: ${metadata.schemaUrl}`,
+        context
+      });
+    }
+
+    if (metadata.contactUrl && !this.isValidUrl(metadata.contactUrl)) {
+      results.push({
+        type: 'warning',
+        message: `Contact URL may not be properly formatted: ${metadata.contactUrl}`,
+        context
+      });
+    }
+
+    if (metadata.termsUrl && !this.isValidUrl(metadata.termsUrl)) {
+      results.push({
+        type: 'warning',
+        message: `Terms URL may not be properly formatted: ${metadata.termsUrl}`,
+        context
+      });
+    }
+
+    // Validate email
+    if (metadata.contactEmail && !this.isValidEmail(metadata.contactEmail)) {
+      results.push({
+        type: 'warning',
+        message: `Contact email may not be properly formatted: ${metadata.contactEmail}`,
+        context
+      });
+    }
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+}
+
+/**
+ * Validation context class that uses different strategies
+ */
+export class RslValidator {
+  private strategy: ValidationStrategy;
+
+  constructor(strategy: ValidationStrategy = new BasicValidationStrategy()) {
+    this.strategy = strategy;
+  }
+
+  setStrategy(strategy: ValidationStrategy): void {
+    this.strategy = strategy;
+  }
+
+  validate(contents: RslContent[]): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    results: ValidationResult[];
+  } {
+    const results = this.strategy.validate(contents);
+
+    const errors = results.filter(r => r.type === 'error').map(r => r.message);
+    const warnings = results.filter(r => r.type === 'warning').map(r => r.message);
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      results
+    };
+  }
+}
+
+/**
+ * Validates RSL data before generation (backward compatibility)
  */
 export function validateRslData(contents: RslContent[]): {
   isValid: boolean;
   errors: string[];
 } {
-  const errors: string[] = [];
-
-  if (contents.length === 0) {
-    errors.push("No content provided for RSL generation");
-  }
-
-  contents.forEach((content, index) => {
-    if (!content.url) {
-      errors.push(`Content at index ${index} is missing URL`);
-    }
-
-    if (!content.rsl.licenses || content.rsl.licenses.length === 0) {
-      errors.push(`Content "${content.url}" has no licenses configured`);
-    }
-
-    content.rsl.licenses?.forEach((license, licenseIndex) => {
-      if (!license.id) {
-        errors.push(`License at index ${licenseIndex} for "${content.url}" is missing ID`);
-      }
-    });
-  });
+  const validator = new RslValidator(new BasicValidationStrategy());
+  const result = validator.validate(contents);
 
   return {
-    isValid: errors.length === 0,
-    errors,
+    isValid: result.isValid,
+    errors: result.errors
   };
+}
+
+/**
+ * Comprehensive validation with warnings
+ */
+export function validateRslDataComprehensive(contents: RslContent[]): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  results: ValidationResult[];
+} {
+  const validator = new RslValidator(new ComprehensiveValidationStrategy());
+  return validator.validate(contents);
 }
 
 /**
@@ -364,27 +838,27 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-    
+
     const contentElements = xmlDoc.getElementsByTagName('content');
     const contents: EditableContent[] = [];
-    
+
     Array.from(contentElements).forEach((contentEl) => {
       const contentUrl = contentEl.getAttribute('url') || websiteUrl;
       const licenseServer = contentEl.getAttribute('server') || '';
       const encrypted = contentEl.getAttribute('encrypted') === 'true';
       const lastModified = contentEl.getAttribute('lastmod') || '';
-      
+
       // Parse licenses
       const licenseElements = contentEl.getElementsByTagName('license');
       const licenses: RslLicense[] = [];
-      
+
       Array.from(licenseElements).forEach((licenseEl, licenseIndex) => {
         const license: RslLicense = {
           id: `license-${Date.now()}-${licenseIndex}`,
           name: `License Option ${licenseIndex + 1}`,
           permits: { usage: [], user: [], geo: [] },
           prohibits: { usage: [], user: [], geo: [] },
-          payment: { 
+          payment: {
             type: 'free',
             standardUrls: [],
             customUrl: "",
@@ -393,7 +867,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
           },
           legal: []
         };
-        
+
         // Parse permits
         const permitElements = licenseEl.getElementsByTagName('permits');
         Array.from(permitElements).forEach(permitEl => {
@@ -403,7 +877,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
             (license.permits as any)[type] = values;
           }
         });
-        
+
         // Parse prohibits
         const prohibitElements = licenseEl.getElementsByTagName('prohibits');
         Array.from(prohibitElements).forEach(prohibitEl => {
@@ -413,7 +887,7 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
             (license.prohibits as any)[type] = values;
           }
         });
-        
+
         // Parse payment
         const paymentElements = licenseEl.getElementsByTagName('payment');
         if (paymentElements.length > 0) {
@@ -421,24 +895,24 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
           const paymentType = paymentEl.getAttribute('type');
           if (license.payment) {
             (license.payment as any).type = paymentType || 'free';
-          
-          const standardElements = paymentEl.getElementsByTagName('standard');
-          license.payment.standardUrls = Array.from(standardElements).map(el => el.textContent || '').filter(url => url);
-          
-          const customElements = paymentEl.getElementsByTagName('custom');
-          if (customElements.length > 0) {
-            license.payment.customUrl = customElements[0].textContent || '';
-          }
-          
-          const amountElements = paymentEl.getElementsByTagName('amount');
-          if (amountElements.length > 0) {
-            const amountEl = amountElements[0];
-            license.payment.amount = amountEl.textContent || '';
-            license.payment.currency = amountEl.getAttribute('currency') || '';
+
+            const standardElements = paymentEl.getElementsByTagName('standard');
+            license.payment.standardUrls = Array.from(standardElements).map(el => el.textContent || '').filter(url => url);
+
+            const customElements = paymentEl.getElementsByTagName('custom');
+            if (customElements.length > 0) {
+              license.payment.customUrl = customElements[0].textContent || '';
+            }
+
+            const amountElements = paymentEl.getElementsByTagName('amount');
+            if (amountElements.length > 0) {
+              const amountEl = amountElements[0];
+              license.payment.amount = amountEl.textContent || '';
+              license.payment.currency = amountEl.getAttribute('currency') || '';
             }
           }
         }
-        
+
         // Parse legal
         const legalElements = licenseEl.getElementsByTagName('legal');
         Array.from(legalElements).forEach(legalEl => {
@@ -448,10 +922,10 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
             license.legal.push({ type, terms });
           }
         });
-        
+
         licenses.push(license);
       });
-      
+
       // Parse metadata
       const metadata: {
         schemaUrl: string;
@@ -468,12 +942,12 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
         contactUrl: '',
         termsUrl: ''
       };
-      
+
       const schemaElements = contentEl.getElementsByTagName('schema');
       if (schemaElements.length > 0) {
         metadata.schemaUrl = schemaElements[0].textContent || '';
       }
-      
+
       const copyrightElements = contentEl.getElementsByTagName('copyright');
       if (copyrightElements.length > 0) {
         const copyrightEl = copyrightElements[0];
@@ -483,12 +957,12 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
         metadata.contactEmail = copyrightEl.getAttribute('contactEmail') || '';
         metadata.contactUrl = copyrightEl.getAttribute('contactUrl') || '';
       }
-      
+
       const termsElements = contentEl.getElementsByTagName('terms');
       if (termsElements.length > 0) {
         metadata.termsUrl = termsElements[0].textContent || '';
       }
-      
+
       // Create editable content object
       const content: EditableContent = {
         url: contentUrl,
@@ -498,10 +972,10 @@ export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: str
         licenses: licenses.length > 0 ? licenses : [createNewLicense()],
         metadata
       };
-      
+
       contents.push(content);
     });
-    
+
     return contents.length > 0 ? contents : [{
       url: websiteUrl,
       licenseServer: '',
