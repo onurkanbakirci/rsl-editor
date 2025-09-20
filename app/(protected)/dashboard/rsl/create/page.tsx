@@ -437,7 +437,7 @@ export default function CreateRSLPage() {
         </DashboardHeader>
 
         <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
-          <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+          <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -476,7 +476,8 @@ export default function CreateRSLPage() {
 
           {/* Right Sidebar - Actions */}
           <div
-            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
+            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full min-w-0 overflow-y-auto lg:pl-6 p-0"
+            style={{ backgroundColor: 'rgba(244, 244, 245, 1)' }}
           >
             <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
@@ -491,7 +492,7 @@ export default function CreateRSLPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Website:</span>
                     <span
-                      className="ml-2 max-w-[200px] truncate font-medium"
+                      className="ml-2 max-w-[150px] truncate font-medium"
                       title={crawlSummary?.baseUrl || `${protocol}://${url}`}
                     >
                       {crawlSummary?.baseUrl || `${protocol}://${url}`}
@@ -656,7 +657,7 @@ export default function CreateRSLPage() {
       </DashboardHeader>
 
       <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
-        <div className="lg:w-3/5 w-full min-w-0 flex-1 lg:pr-6 overflow-hidden">
+        <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -1485,7 +1486,8 @@ export default function CreateRSLPage() {
 
         {/* Right Sidebar - Sources */}
         <div
-          className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full overflow-y-auto lg:p-6 p-0 bg-muted/30 dark:bg-muted/20"
+          className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full min-w-0 overflow-y-auto lg:pl-6 p-0"
+            style={{ backgroundColor: 'rgba(244, 244, 245, 1)' }}
         >
           <Card className="border-0 bg-transparent shadow-none">
             <CardHeader>
