@@ -10,28 +10,9 @@ import {
   generateRslXml,
   validateRslData,
   createNewLicense,
-  getAvailableUsageTypes,
-  getAvailableUserTypes,
-  getAvailableGeoCodes,
-  getAvailablePaymentTypes,
-  getAvailableWarrantyTypes,
-  getAvailableDisclaimerTypes,
-  getAvailableCurrencies,
   type RslContent,
   type RslLicense,
 } from "@/lib/rsl-generator";
-import {
-  generateRssWithRsl,
-  createRssOptionsFromWebsite,
-  validateRssIntegration,
-  generateRobotsWithRsl,
-  createRobotsOptionsFromWebsite,
-  validateRobotsIntegration,
-  generateWebPagesWithEmbeddedRsl,
-  createWebPagesOptionsFromWebsite,
-  generateEpubWithRsl,
-  createMediaFilesOptionsFromWebsite,
-} from "@/lib/integration-generators";
 // Remove all crawling-related imports - everything is handled server-side now
 import { Button } from "@/components/ui/button";
 import {
@@ -42,10 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { HighlightedXml } from "@/components/shared/highlighted-xml";
 import { Icons } from "@/components/shared/icons";
-import { IntegrationGuide } from "@/components/rsl/integration-guide";
-import { DocumentActions } from "@/components/rsl/document-actions";
 import { AddLinksSection } from "@/components/rsl/add-links-section";
 import { LinkSources } from "@/components/rsl/link-sources";
 import { RslConfigSummary } from "@/components/rsl/rsl-config-summary";
@@ -79,97 +57,6 @@ interface CrawledLink {
 
 // Removed InitialRSLData interface - not needed for create-only page
 
-// Helper function to generate RSS with RSL using the new library
-const generateRssRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-  // Convert CrawledLink to RslContent format
-  const rslContents: RslContent[] = crawledLinks
-    .filter(link => link.selected && link.formData?.rsl)
-    .map(link => ({
-      url: link.url,
-      rsl: {
-        licenseServer: link.formData!.rsl!.licenseServer,
-        encrypted: link.formData!.rsl!.encrypted,
-        lastModified: link.formData!.rsl!.lastModified,
-        licenses: link.formData!.rsl!.licenses || [],
-        metadata: link.formData!.rsl!.metadata
-      }
-    }));
-
-  // Create RSS options from website configuration
-  const rssOptions = createRssOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-  // Generate RSS with RSL integration using template strategy
-  return generateRssWithRsl(rslContents, rssOptions);
-};
-
-// Helper function to generate robots.txt with RSL using the new library
-const generateRobotsRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-  // Convert CrawledLink to RslContent format
-  const rslContents: RslContent[] = crawledLinks
-    .filter(link => link.selected && link.formData?.rsl)
-    .map(link => ({
-      url: link.url,
-      rsl: {
-        licenseServer: link.formData!.rsl!.licenseServer,
-        encrypted: link.formData!.rsl!.encrypted,
-        lastModified: link.formData!.rsl!.lastModified,
-        licenses: link.formData!.rsl!.licenses || [],
-        metadata: link.formData!.rsl!.metadata
-      }
-    }));
-
-  // Create robots.txt options from website configuration
-  const robotsOptions = createRobotsOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-  // Generate robots.txt with RSL integration using template strategy
-  return generateRobotsWithRsl(rslContents, robotsOptions);
-};
-
-// Helper function to generate web pages with RSL using the new library
-const generateWebPagesRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-  // Convert CrawledLink to RslContent format
-  const rslContents: RslContent[] = crawledLinks
-    .filter(link => link.selected && link.formData?.rsl)
-    .map(link => ({
-      url: link.url,
-      rsl: {
-        licenseServer: link.formData!.rsl!.licenseServer,
-        encrypted: link.formData!.rsl!.encrypted,
-        lastModified: link.formData!.rsl!.lastModified,
-        licenses: link.formData!.rsl!.licenses || [],
-        metadata: link.formData!.rsl!.metadata
-      }
-    }));
-
-  // Create web pages options from website configuration
-  const webPagesOptions = createWebPagesOptionsFromWebsite(`${protocol}://${websiteUrl}`, 'embedded');
-
-  // Generate web pages with RSL integration using embedded strategy
-  return generateWebPagesWithEmbeddedRsl(rslContents, webPagesOptions);
-};
-
-// Helper function to generate media files with RSL using the new library
-const generateMediaFilesRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-  // Convert CrawledLink to RslContent format
-  const rslContents: RslContent[] = crawledLinks
-    .filter(link => link.selected && link.formData?.rsl)
-    .map(link => ({
-      url: link.url,
-      rsl: {
-        licenseServer: link.formData!.rsl!.licenseServer,
-        encrypted: link.formData!.rsl!.encrypted,
-        lastModified: link.formData!.rsl!.lastModified,
-        licenses: link.formData!.rsl!.licenses || [],
-        metadata: link.formData!.rsl!.metadata
-      }
-    }));
-
-  // Create media files options from website configuration
-  const mediaFilesOptions = createMediaFilesOptionsFromWebsite(`${protocol}://${websiteUrl}`, 'epub');
-
-  // Generate media files with RSL integration using EPUB strategy
-  return generateEpubWithRsl(rslContents, mediaFilesOptions);
-};
 
 export default function CreateRSLPage() {
   const router = useRouter();
@@ -192,17 +79,12 @@ export default function CreateRSLPage() {
   const [protocol, setProtocol] = useState("https");
 
   // Removed linkCount - using actual crawled data now
-  const [isLinksExpanded, setIsLinksExpanded] = useState(false);
   const [showCrawledLinks, setShowCrawledLinks] = useState(false);
-  const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
 
   // URL expansion and license tab state for create mode
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
-  const [showXmlPreview, setShowXmlPreview] = useState(false);
-  const [generatedXml, setGeneratedXml] = useState("");
   const [isGeneratingXml, setIsGeneratingXml] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleFetchLinks = async () => {
     if (!url) return;
@@ -370,29 +252,6 @@ export default function CreateRSLPage() {
     return getCurrentRslData(pageUrl)?.licenses || [];
   };
 
-  const getCurrentLicense = (pageUrl: string) => {
-    const licenses = getCurrentLicenses(pageUrl);
-    const activeId = activeLicenseTab[pageUrl];
-    return licenses.find((l) => l.id === activeId) || licenses[0];
-  };
-
-  const updateCurrentLicense = (pageUrl: string, licenseData: any) => {
-    const currentRsl = getCurrentRslData(pageUrl);
-    const currentLicenses = getCurrentLicenses(pageUrl);
-    const activeId = activeLicenseTab[pageUrl] || currentLicenses[0]?.id;
-
-    const updatedLicenses = currentLicenses.map((license) =>
-      license.id === activeId ? { ...license, ...licenseData } : license,
-    );
-
-    updatePageFormData(pageUrl, {
-      rsl: {
-        ...currentRsl,
-        licenses: updatedLicenses,
-      },
-    });
-  };
-
   const generateRslXmlFromLinks = () => {
     const selectedLinks = crawledLinks.filter(
       (link) => link.selected && link.formData?.rsl,
@@ -414,37 +273,20 @@ export default function CreateRSLPage() {
   };
 
   const handleCreateRsl = async () => {
-    setIsGeneratingXml(true);
-
-    // Simulate loading time for better UX
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const xml = generateRslXmlFromLinks();
-    setGeneratedXml(xml);
-    setIsGeneratingXml(false);
-    setShowXmlPreview(true);
-  };
-
-  const handleSaveRsl = async () => {
-    if (!generatedXml) {
-      toast.error("No RSL document to save", {
-        description:
-          "Please generate an RSL document first by clicking 'Create RSL'.",
-      });
-      return;
-    }
-
     if (!url) {
       toast.error("Missing website URL", {
-        description: "Please enter a website URL before saving.",
+        description: "Please enter a website URL before creating RSL.",
       });
       return;
     }
 
-    setIsSaving(true);
+    setIsGeneratingXml(true);
 
     try {
-      // POST for new documents only (create mode)
+      // Generate XML
+      const xml = generateRslXmlFromLinks();
+      
+      // Save RSL immediately
       const response = await fetch("/api/rsl", {
         method: "POST",
         headers: {
@@ -452,21 +294,21 @@ export default function CreateRSLPage() {
         },
         body: JSON.stringify({
           websiteUrl: `${protocol}://${url}`,
-          xmlContent: generatedXml,
+          xmlContent: xml,
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          toast.success("RSL saved successfully!", {
-            description: `Your RSL document for ${protocol}://${url} has been saved.`,
+          toast.success("RSL created successfully!", {
+            description: `Your RSL document for ${protocol}://${url} has been created.`,
           });
-          // Redirect to RSL list page after successful save
-          router.push('/dashboard/rsl');
+          // Redirect to the view page
+          router.push(`/dashboard/rsl/${result.data.id}`);
         } else {
-          toast.error("Failed to save RSL", {
-            description: "There was an error saving your RSL document. Please try again.",
+          toast.error("Failed to create RSL", {
+            description: "There was an error creating your RSL document. Please try again.",
           });
         }
       } else {
@@ -475,15 +317,16 @@ export default function CreateRSLPage() {
         });
       }
     } catch (error) {
-      console.error("Error saving RSL:", error);
+      console.error("Error creating RSL:", error);
       toast.error("Network error", {
         description:
           "Unable to connect to the server. Please check your connection and try again.",
       });
     } finally {
-      setIsSaving(false);
+      setIsGeneratingXml(false);
     }
   };
+
 
   const toggleUrlExpanded = (url: string) => {
     setExpandedUrls((prev) => {
@@ -498,87 +341,6 @@ export default function CreateRSLPage() {
   };
 
 
-  // XML Preview state
-  if (showXmlPreview) {
-    return (
-      <>
-        <DashboardHeader
-          heading="RSL Document Preview"
-          text="Generated RSL XML document based on your configuration"
-        >
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowXmlPreview(false)}>
-              <Icons.arrowLeft className="mr-2 size-4" />
-              Back to Form
-            </Button>
-          </div>
-        </DashboardHeader>
-
-        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
-          <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold">
-                    RSL Document
-                  </CardTitle>
-                  <CardDescription>
-                    Review your generated RSL XML document. You can copy, save,
-                    or download it from the actions panel.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedXml);
-                        toast.success("XML copied to clipboard");
-                      }}
-                    >
-                      <Icons.copy className="size-4" />
-                    </Button>
-                    <div className="p-4 pr-16 overflow-x-auto">
-                      <HighlightedXml
-                        code={generatedXml}
-                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Integration Guide */}
-              <IntegrationGuide
-                crawledLinks={crawledLinks}
-                websiteUrl={url}
-                protocol={protocol}
-                generateRssContent={generateRssRslContent}
-                generateRobotsContent={generateRobotsRslContent}
-                generateWebPagesContent={generateWebPagesRslContent}
-                generateMediaFilesContent={generateMediaFilesRslContent}
-                advanced={true}
-              />
-            </div>
-          </div>
-
-          {/* Right Sidebar - Actions */}
-          <DocumentActions
-            generatedXml={generatedXml}
-            crawledLinks={crawledLinks}
-            crawlSummary={crawlSummary}
-            url={url}
-            protocol={protocol}
-            isSaving={isSaving}
-            onSave={handleSaveRsl}
-            mode="create"
-          />
-        </div>
-      </>
-    );
-  }
 
   // Main form state
   return (
@@ -692,7 +454,7 @@ export default function CreateRSLPage() {
                 {isGeneratingXml ? (
                   <>
                     <Icons.spinner className="mr-2 size-4 animate-spin" />
-                    Generating...
+                    Creating...
                   </>
                 ) : (
                   "Create RSL"

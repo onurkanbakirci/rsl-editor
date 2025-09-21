@@ -23,6 +23,7 @@ interface RSL {
 }
 
 function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL) => void; onCardClick: (rsl: RSL) => void }) {
+  const router = useRouter();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -111,7 +112,7 @@ function RSLCard({ rsl, onDelete, onCardClick }: { rsl: RSL; onDelete: (rsl: RSL
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    onCardClick(rsl);
+                    router.push(`/dashboard/rsl/${rsl.id}/edit`);
                   }}
                 >
                   <Icons.edit className="mr-2 size-4" />
@@ -213,7 +214,7 @@ export default function RSLPage() {
   };
 
   const handleCardClick = (rsl: RSL) => {
-    router.push(`/dashboard/rsl/${rsl.id}/edit`);
+    router.push(`/dashboard/rsl/${rsl.id}`);
   };
 
   if (loading) {

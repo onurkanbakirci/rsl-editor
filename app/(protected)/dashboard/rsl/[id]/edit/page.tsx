@@ -3,36 +3,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 import {
   generateRslXml,
   validateRslData,
   createNewLicense,
-  getAvailableUsageTypes,
-  getAvailableUserTypes,
-  getAvailableGeoCodes,
-  getAvailablePaymentTypes,
-  getAvailableWarrantyTypes,
-  getAvailableDisclaimerTypes,
-  getAvailableCurrencies,
   parseRslXmlToEditableContent,
   type RslContent,
   type RslLicense,
-  type EditableContent,
 } from "@/lib/rsl-generator";
-import {
-  generateRssWithRsl,
-  generateRobotsWithRsl,
-  generateWebPagesWithEmbeddedRsl,
-  generateWebPagesWithLinkedRsl,
-  generateEpubWithRsl,
-  generateImageWithRsl,
-  createRssOptionsFromWebsite,
-  createRobotsOptionsFromWebsite,
-  createWebPagesOptionsFromWebsite,
-  createMediaFilesOptionsFromWebsite,
-} from "@/lib/integration-generators";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,10 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { HighlightedXml } from "@/components/shared/highlighted-xml";
 import { Icons } from "@/components/shared/icons";
-import { IntegrationGuide } from "@/components/rsl/integration-guide";
-import { DocumentActions } from "@/components/rsl/document-actions";
 import { AddLinksSection } from "@/components/rsl/add-links-section";
 import { LinkSources } from "@/components/rsl/link-sources";
 import { RslConfigSummary } from "@/components/rsl/rsl-config-summary";
@@ -110,18 +88,12 @@ export default function EditRSLPage() {
   const [url, setUrl] = useState("");
   const [protocol, setProtocol] = useState("https");
 
-  const [isLinksExpanded, setIsLinksExpanded] = useState(false);
   const [showCrawledLinks, setShowCrawledLinks] = useState(false);
-  const [selectedPageForm, setSelectedPageForm] = useState<string | null>(null);
 
   // URL expansion and license tab state for edit mode
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [activeLicenseTab, setActiveLicenseTab] = useState<Record<string, string>>({});
-  const [showXmlPreview, setShowXmlPreview] = useState(false);
-  const [showExistingXmlView, setShowExistingXmlView] = useState(false);
-  const [generatedXml, setGeneratedXml] = useState("");
   const [isGeneratingXml, setIsGeneratingXml] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Load existing RSL data
   useEffect(() => {
@@ -392,29 +364,6 @@ export default function EditRSLPage() {
     return getCurrentRslData(pageUrl)?.licenses || [];
   };
 
-  const getCurrentLicense = (pageUrl: string) => {
-    const licenses = getCurrentLicenses(pageUrl);
-    const activeId = activeLicenseTab[pageUrl];
-    return licenses.find((l) => l.id === activeId) || licenses[0];
-  };
-
-  const updateCurrentLicense = (pageUrl: string, licenseData: any) => {
-    const currentRsl = getCurrentRslData(pageUrl);
-    const currentLicenses = getCurrentLicenses(pageUrl);
-    const activeId = activeLicenseTab[pageUrl] || currentLicenses[0]?.id;
-
-    const updatedLicenses = currentLicenses.map((license) =>
-      license.id === activeId ? { ...license, ...licenseData } : license,
-    );
-
-    updatePageFormData(pageUrl, {
-      rsl: {
-        ...currentRsl,
-        licenses: updatedLicenses,
-      },
-    });
-  };
-
   const generateRslXmlFromLinks = () => {
     const selectedLinks = crawledLinks.filter(
       (link) => link.selected && link.formData?.rsl,
@@ -436,37 +385,20 @@ export default function EditRSLPage() {
   };
 
   const handleUpdateRsl = async () => {
-    setIsGeneratingXml(true);
-
-    // Simulate loading time for better UX
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const xml = generateRslXmlFromLinks();
-    setGeneratedXml(xml);
-    setIsGeneratingXml(false);
-    setShowXmlPreview(true);
-  };
-
-  const handleSaveRsl = async () => {
-    if (!generatedXml) {
-      toast.error("No RSL document to save", {
-        description:
-          "Please generate an RSL document first by clicking 'Update RSL'.",
-      });
-      return;
-    }
-
     if (!url) {
       toast.error("Missing website URL", {
-        description: "Please enter a website URL before saving.",
+        description: "Please enter a website URL before updating RSL.",
       });
       return;
     }
 
-    setIsSaving(true);
+    setIsGeneratingXml(true);
 
     try {
-      // PUT for updating existing documents (edit mode)
+      // Generate XML
+      const xml = generateRslXmlFromLinks();
+      
+      // Save RSL immediately
       const response = await fetch(`/api/rsl/${rslId}`, {
         method: "PUT",
         headers: {
@@ -474,7 +406,7 @@ export default function EditRSLPage() {
         },
         body: JSON.stringify({
           websiteUrl: `${protocol}://${url}`,
-          xmlContent: generatedXml,
+          xmlContent: xml,
         }),
       });
 
@@ -484,15 +416,8 @@ export default function EditRSLPage() {
           toast.success("RSL updated successfully!", {
             description: `Your RSL document for ${protocol}://${url} has been updated.`,
           });
-          // Update local state
-          setRsl(prev => prev ? {
-            ...prev,
-            websiteUrl: `${protocol}://${url}`,
-            xmlContent: generatedXml,
-            updatedAt: new Date().toISOString()
-          } : null);
-          // Redirect to RSL list page after successful update
-          router.push('/dashboard/rsl');
+          // Redirect to view page after successful update
+          router.push(`/dashboard/rsl/${rslId}`);
         } else {
           toast.error("Failed to update RSL", {
             description: "There was an error updating your RSL document. Please try again.",
@@ -510,109 +435,11 @@ export default function EditRSLPage() {
           "Unable to connect to the server. Please check your connection and try again.",
       });
     } finally {
-      setIsSaving(false);
+      setIsGeneratingXml(false);
     }
   };
 
-  // Helper function to generate RSS with RSL using the new library
-  const generateRssRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-    // Convert CrawledLink to RslContent format
-    const rslContents: RslContent[] = crawledLinks
-      .filter(link => link.selected && link.formData?.rsl)
-      .map(link => ({
-        url: link.url,
-        rsl: {
-          licenseServer: link.formData!.rsl!.licenseServer,
-          encrypted: link.formData!.rsl!.encrypted,
-          lastModified: link.formData!.rsl!.lastModified,
-          licenses: link.formData!.rsl!.licenses || [],
-          metadata: link.formData!.rsl!.metadata
-        }
-      }));
 
-    // Create RSS options from website configuration
-    const rssOptions = createRssOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-    // Generate RSS with RSL integration using template strategy
-    return generateRssWithRsl(rslContents, rssOptions);
-  };
-
-  // Helper function to generate robots.txt with RSL
-  const generateRobotsRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https') => {
-    // Convert CrawledLink to RslContent format
-    const rslContents: RslContent[] = crawledLinks
-      .filter(link => link.selected && link.formData?.rsl)
-      .map(link => ({
-        url: link.url,
-        rsl: {
-          licenseServer: link.formData!.rsl!.licenseServer,
-          encrypted: link.formData!.rsl!.encrypted,
-          lastModified: link.formData!.rsl!.lastModified,
-          licenses: link.formData!.rsl!.licenses || [],
-          metadata: link.formData!.rsl!.metadata
-        }
-      }));
-
-    // Create robots.txt options from website configuration
-    const robotsOptions = createRobotsOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-    // Generate robots.txt with RSL integration
-    return generateRobotsWithRsl(rslContents, robotsOptions);
-  };
-
-  // Helper function to generate web pages with embedded RSL
-  const generateWebPagesRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https', type: 'embedded' | 'linked' = 'embedded') => {
-    // Convert CrawledLink to RslContent format
-    const rslContents: RslContent[] = crawledLinks
-      .filter(link => link.selected && link.formData?.rsl)
-      .map(link => ({
-        url: link.url,
-        rsl: {
-          licenseServer: link.formData!.rsl!.licenseServer,
-          encrypted: link.formData!.rsl!.encrypted,
-          lastModified: link.formData!.rsl!.lastModified,
-          licenses: link.formData!.rsl!.licenses || [],
-          metadata: link.formData!.rsl!.metadata
-        }
-      }));
-
-    // Create web pages options from website configuration
-    const webPagesOptions = createWebPagesOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-    // Generate web pages with RSL integration
-    if (type === 'embedded') {
-      return generateWebPagesWithEmbeddedRsl(rslContents, webPagesOptions);
-    } else {
-      return generateWebPagesWithLinkedRsl(rslContents, webPagesOptions);
-    }
-  };
-
-  // Helper function to generate media files with RSL
-  const generateMediaFilesRslContent = (crawledLinks: CrawledLink[], websiteUrl: string, protocol: string = 'https', type: 'epub' | 'image' = 'epub') => {
-    // Convert CrawledLink to RslContent format
-    const rslContents: RslContent[] = crawledLinks
-      .filter(link => link.selected && link.formData?.rsl)
-      .map(link => ({
-        url: link.url,
-        rsl: {
-          licenseServer: link.formData!.rsl!.licenseServer,
-          encrypted: link.formData!.rsl!.encrypted,
-          lastModified: link.formData!.rsl!.lastModified,
-          licenses: link.formData!.rsl!.licenses || [],
-          metadata: link.formData!.rsl!.metadata
-        }
-      }));
-
-    // Create media files options from website configuration
-    const mediaFilesOptions = createMediaFilesOptionsFromWebsite(`${protocol}://${websiteUrl}`);
-
-    // Generate media files with RSL integration
-    if (type === 'epub') {
-      return generateEpubWithRsl(rslContents, mediaFilesOptions);
-    } else {
-      return generateImageWithRsl(rslContents, mediaFilesOptions);
-    }
-  };
 
   const toggleUrlExpanded = (url: string) => {
     setExpandedUrls((prev) => {
@@ -689,281 +516,7 @@ export default function EditRSLPage() {
     );
   }
 
-  // Existing XML View state
-  if (showExistingXmlView && rsl?.xmlContent) {
-    return (
-      <>
-        <DashboardHeader
-          heading="Current RSL Document"
-          text="View the existing RSL XML document that is currently saved"
-        >
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowExistingXmlView(false)}>
-              <Icons.arrowLeft className="mr-2 size-4" />
-              Back to Form
-            </Button>
-          </div>
-        </DashboardHeader>
 
-        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
-          <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold">
-                    Current RSL Document
-                  </CardTitle>
-                  <CardDescription>
-                    This is the existing RSL XML document that is currently saved in the database.
-                    You can copy it or compare it with your updated version.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      onClick={() => {
-                        navigator.clipboard.writeText(rsl.xmlContent);
-                        toast.success("XML copied to clipboard");
-                      }}
-                    >
-                      <Icons.copy className="size-4" />
-                    </Button>
-                    <div className="p-4 pr-16 overflow-x-auto">
-                      <HighlightedXml
-                        code={rsl.xmlContent}
-                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Integration Guide */}
-              <IntegrationGuide
-                crawledLinks={crawledLinks}
-                websiteUrl={url}
-                protocol={protocol}
-                generateRssContent={generateRssRslContent}
-                generateRobotsContent={generateRobotsRslContent}
-                generateWebPagesContent={generateWebPagesRslContent}
-                generateMediaFilesContent={generateMediaFilesRslContent}
-                advanced={true}
-              />
-            </div>
-          </div>
-
-          {/* Right Sidebar - Actions */}
-          <div
-            className="sticky top-0 lg:h-screen h-auto lg:w-2/5 w-full min-w-0 overflow-y-auto lg:pl-6 p-0 bg-muted/30 dark:bg-muted/10"
-          >
-            <Card className="border-0 bg-transparent shadow-none">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icons.shield className="size-5" />
-                  Document Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Document Info */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Website:</span>
-                    <span
-                      className="ml-2 max-w-[150px] truncate font-medium"
-                      title={rsl.websiteUrl}
-                    >
-                      {rsl.websiteUrl}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Document size:
-                    </span>
-                    <span className="font-medium">
-                      {(new Blob([rsl.xmlContent]).size / 1024).toFixed(1)} KB
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Created:</span>
-                    <span className="font-medium">
-                      {new Date(rsl.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Last updated:</span>
-                    <span className="font-medium">
-                      {new Date(rsl.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="space-y-4 border-t pt-4">
-                  <h4 className="text-sm font-medium text-muted-foreground">
-                    Actions
-                  </h4>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      navigator.clipboard.writeText(rsl.xmlContent);
-                      toast.success("XML copied to clipboard");
-                    }}
-                  >
-                    <Icons.copy className="mr-2 size-4" />
-                    Copy to Clipboard
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      const blob = new Blob([rsl.xmlContent], {
-                        type: "application/xml",
-                      });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "current-rsl-document.xml";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      toast.success("XML file downloaded");
-                    }}
-                  >
-                    <Icons.download className="mr-2 size-4" />
-                    Download XML File
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      const blob = new Blob([rsl.xmlContent], {
-                        type: "application/xml",
-                      });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, "_blank");
-                      setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }}
-                  >
-                    <Icons.arrowUpRight className="mr-2 size-4" />
-                    Open in New Tab
-                  </Button>
-                </div>
-
-                {/* Status Indicator */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="size-2 rounded-full bg-blue-500"></div>
-                    <span className="text-muted-foreground">
-                      Current version
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    This is the RSL document currently saved in your database.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // XML Preview state
-  if (showXmlPreview) {
-    return (
-      <>
-        <DashboardHeader
-          heading="RSL Document Preview"
-          text="Updated RSL XML document based on your configuration"
-        >
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowXmlPreview(false)}>
-              <Icons.arrowLeft className="mr-2 size-4" />
-              Back to Form
-            </Button>
-          </div>
-        </DashboardHeader>
-
-        <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
-          <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold">
-                    RSL Document
-                  </CardTitle>
-                  <CardDescription>
-                    Review your updated RSL XML document. You can copy, save,
-                    or download it from the actions panel.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedXml);
-                        toast.success("XML copied to clipboard");
-                      }}
-                    >
-                      <Icons.copy className="size-4" />
-                    </Button>
-                    <div className="p-4 pr-16 overflow-x-auto">
-                      <HighlightedXml
-                        code={generatedXml}
-                        className="text-sm leading-relaxed break-all whitespace-pre-wrap"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Integration Guide */}
-              <IntegrationGuide
-                crawledLinks={crawledLinks}
-                websiteUrl={url}
-                protocol={protocol}
-                generateRssContent={generateRssRslContent}
-                generateRobotsContent={generateRobotsRslContent}
-                generateWebPagesContent={generateWebPagesRslContent}
-                generateMediaFilesContent={generateMediaFilesRslContent}
-                advanced={true}
-              />
-            </div>
-          </div>
-
-          {/* Right Sidebar - Actions */}
-          <DocumentActions
-            generatedXml={generatedXml}
-            crawledLinks={crawledLinks}
-            crawlSummary={crawlSummary}
-            url={url}
-            protocol={protocol}
-            isSaving={isSaving}
-            onSave={handleSaveRsl}
-            mode="edit"
-          />
-        </div>
-      </>
-    );
-  }
 
   // Main form state (same as create page but for editing)
   return (
@@ -971,7 +524,16 @@ export default function EditRSLPage() {
       <DashboardHeader
         heading="Edit RSL"
         text="Refetch links or modify existing RSL configuration and licensing terms."
-      />
+      >
+        <div className="flex gap-2">
+          <Link href={`/dashboard/rsl/${rslId}`}>
+            <Button variant="outline">
+              <Icons.arrowLeft className="mr-2 size-4" />
+              Back to View
+            </Button>
+          </Link>
+        </div>
+      </DashboardHeader>
 
       <div className="flex max-w-full overflow-hidden lg:flex-row flex-col gap-6">
         <div className="lg:w-3/5 w-full min-w-0 flex-1 overflow-hidden">
@@ -1076,17 +638,6 @@ export default function EditRSLPage() {
                   )}
                 </Button>
 
-                {rsl?.xmlContent && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="lg"
-                    onClick={() => setShowExistingXmlView(true)}
-                  >
-                    <Icons.eye className="mr-2 size-4" />
-                    View Current XML
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>

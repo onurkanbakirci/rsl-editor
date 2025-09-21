@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,9 +45,10 @@ interface DocumentActionsProps {
   } | null;
   url: string;
   protocol: string;
-  isSaving: boolean;
-  onSave: () => void;
-  mode?: "create" | "edit";
+  mode?: "create" | "edit" | "view";
+  // Optional fields for view mode
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function DocumentActions({
@@ -57,38 +57,10 @@ export function DocumentActions({
   crawlSummary,
   url,
   protocol,
-  isSaving,
-  onSave,
-  mode = "create"
+  mode = "create",
+  createdAt,
+  updatedAt
 }: DocumentActionsProps) {
-  const handleDownload = () => {
-    const blob = new Blob([generatedXml], {
-      type: "application/xml",
-    });
-    const downloadUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = "rsl-document.xml";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(downloadUrl);
-    toast.success("XML file downloaded");
-  };
-
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(generatedXml);
-    toast.success("XML copied to clipboard");
-  };
-
-  const handleOpenInNewTab = () => {
-    const blob = new Blob([generatedXml], {
-      type: "application/xml",
-    });
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, "_blank");
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-  };
 
   const selectedLinks = crawledLinks.filter((link) => link.selected);
   const totalLicenses = selectedLinks
@@ -104,7 +76,7 @@ export function DocumentActions({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Icons.shield className="size-5" />
-            Document Actions
+            Document Info
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -144,70 +116,25 @@ export function DocumentActions({
                 {totalLicenses}
               </span>
             </div>
-          </div>
 
-          {/* Primary Actions */}
-          <div className="space-y-4 border-t pt-4">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Primary Actions
-            </h4>
+            {/* Show created/updated dates for view mode */}
+            {mode === "view" && createdAt && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Created:</span>
+                <span className="font-medium">
+                  {new Date(createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
 
-            <Button
-              onClick={onSave}
-              disabled={isSaving || !generatedXml || !url}
-              className="w-full"
-              size="lg"
-            >
-              {isSaving ? (
-                <>
-                  <Icons.spinner className="mr-2 size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Icons.save className="mr-2 size-4" />
-                  {mode === "create" ? "Save RSL Document" : "Update RSL Document"}
-                </>
-              )}
-            </Button>
-
-            <Button
-              onClick={handleDownload}
-              disabled={isSaving}
-              variant="outline"
-              className="w-full"
-              size="lg"
-            >
-              <Icons.download className="mr-2 size-4" />
-              Download XML File
-            </Button>
-          </div>
-
-          {/* Secondary Actions */}
-          <div className="space-y-3 border-t pt-4">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Additional Options
-            </h4>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start"
-              onClick={handleCopyToClipboard}
-            >
-              <Icons.copy className="mr-2 size-4" />
-              Copy to Clipboard
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start"
-              onClick={handleOpenInNewTab}
-            >
-              <Icons.arrowUpRight className="mr-2 size-4" />
-              Open in New Tab
-            </Button>
+            {mode === "view" && updatedAt && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Last updated:</span>
+                <span className="font-medium">
+                  {new Date(updatedAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Status Indicator */}
@@ -219,8 +146,7 @@ export function DocumentActions({
               </span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Your RSL document has been {mode === "create" ? "generated" : "updated"} successfully and is
-              ready to save or download.
+              Your RSL document has been {mode === "create" ? "generated" : "updated"} successfully.
             </p>
           </div>
         </CardContent>
