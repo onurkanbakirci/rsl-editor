@@ -1,127 +1,39 @@
-"use client";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { getCurrentUser } from "@/lib/session";
+import { getRSLById } from "@/lib/rsl";
+import { constructMetadata } from "@/lib/utils";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HighlightedXml } from "@/components/shared/highlighted-xml";
 import { Icons } from "@/components/shared/icons";
 import { DocumentActions } from "@/components/rsl/document-actions";
-import Link from "next/link";
+import { RSLActionsForm } from "@/components/forms/rsl-actions-form";
 
-// RSL data structure from API
-interface RSL {
-  id: string;
-  websiteUrl: string;
-  xmlContent?: string;
-  createdAt: string;
-  updatedAt: string;
+export const metadata = constructMetadata({
+  title: "RSL Document – Dashboard",
+  description: "View and manage your RSL document.",
+});
+
+interface RSLViewPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function RSLViewPage() {
-  const params = useParams();
-  const router = useRouter();
-  const [rsl, setRsl] = useState<RSL | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export default async function RSLViewPage({ params }: RSLViewPageProps) {
+  const user = await getCurrentUser();
 
-  const rslId = params.id as string;
+  if (!user?.id) redirect("/login");
 
-  // Fetch RSL data
-  useEffect(() => {
-    const fetchRslData = async () => {
-      if (!rslId) return;
+  const rsl = await getRSLById(params.id, user.id);
 
-      try {
-        const response = await fetch(`/api/rsl/${rslId}`);
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            const rslData = result.data;
-            setRsl(rslData);
-          } else {
-            toast.error("Failed to load RSL", {
-              description: "The RSL document could not be found.",
-            });
-            router.push('/dashboard/rsl');
-          }
-        } else if (response.status === 404) {
-          toast.error("RSL not found", {
-            description: "The requested RSL document does not exist.",
-          });
-          router.push('/dashboard/rsl');
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
-      } catch (error) {
-        console.error('Error fetching RSL:', error);
-        toast.error("Failed to load RSL", {
-          description: "There was an error loading the RSL document. Please try again.",
-        });
-        router.push('/dashboard/rsl');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRslData();
-  }, [rslId, router]);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <>
-        <DashboardHeader
-          heading="RSL Document"
-          text="Loading RSL document..."
-        >
-          <div className="flex gap-2">
-            <Link href="/dashboard/rsl">
-              <Button variant="outline">
-                <Icons.arrowLeft className="mr-2 size-4" />
-                Back
-              </Button>
-            </Link>
-          </div>
-        </DashboardHeader>
-
-        <div className="max-w-6xl">
-          <Card>
-            <CardContent className="p-8">
-              <div className="flex items-center justify-center">
-                <Icons.spinner className="size-8 animate-spin" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </>
-    );
-  }
-
-  // Error state (RSL not found)
   if (!rsl) {
-    return (
-      <>
-        <DashboardHeader
-          heading="RSL Not Found"
-          text="The requested RSL document could not be found."
-        >
-          <div className="flex gap-2">
-            <Link href="/dashboard/rsl">
-              <Button variant="outline">
-                <Icons.arrowLeft className="mr-2 size-4" />
-                Back to RSL List
-              </Button>
-            </Link>
-          </div>
-        </DashboardHeader>
-      </>
-    );
+    redirect("/dashboard/rsl");
   }
 
-  // Main view - show the RSL document with preview functionality
   return (
     <>
       <DashboardHeader
@@ -136,51 +48,10 @@ export default function RSLViewPage() {
             </Button>
           </Link>
 
-          {/* Action Buttons */}
-          <Button
-            onClick={() => {
-              const blob = new Blob([rsl.xmlContent || ''], { type: 'application/xml' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'rsl-document.xml';
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              toast.success("XML file downloaded");
-            }}
-            variant="outline"
-          >
-            <Icons.download className="mr-2 size-4" />
-            Download
-          </Button>
+          {/* Action Buttons - Client-side form */}
+          <RSLActionsForm rsl={rsl} />
 
-          <Button
-            variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(rsl.xmlContent || '');
-              toast.success("XML copied to clipboard");
-            }}
-          >
-            <Icons.copy className="mr-2 size-4" />
-            Copy
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              const blob = new Blob([rsl.xmlContent || ''], { type: 'application/xml' });
-              const url = URL.createObjectURL(blob);
-              window.open(url, '_blank');
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }}
-          >
-            <Icons.arrowUpRight className="mr-2 size-4" />
-            Open
-          </Button>
-
-          <Link href={`/dashboard/rsl/${rslId}/edit`}>
+          <Link href={`/dashboard/rsl/${params.id}/edit`}>
             <Button>
               <Icons.edit className="mr-2 size-4" />
               Edit RSL
@@ -201,17 +72,7 @@ export default function RSLViewPage() {
               </CardHeader>
               <CardContent>
                 <div className="relative max-h-[70vh] overflow-auto rounded-lg border bg-background">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-3 top-3 z-10 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                    onClick={() => {
-                      navigator.clipboard.writeText(rsl.xmlContent || '');
-                      toast.success("XML copied to clipboard");
-                    }}
-                  >
-                    <Icons.copy className="size-4" />
-                  </Button>
+                  <RSLActionsForm rsl={rsl} variant="copy-button" />
                   <div className="p-4 pr-16">
                     <HighlightedXml
                       code={rsl.xmlContent || ''}
