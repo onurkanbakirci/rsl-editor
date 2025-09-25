@@ -13,7 +13,7 @@ import { DocumentActions } from "@/components/rsl/document-actions";
 import { RSLActionsForm } from "@/components/forms/rsl-actions-form";
 
 export const metadata = constructMetadata({
-  title: "RSL Document – Dashboard",
+  title: "RSL Document – RSL Editor",
   description: "View and manage your RSL document.",
 });
 

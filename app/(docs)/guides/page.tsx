@@ -7,7 +7,7 @@ import { DocsPageHeader } from "@/components/docs/page-header";
 import MaxWidthWrapper from "@/components/shared/max-width-wrapper";
 
 export const metadata = {
-  title: "Guides",
+  title: "Guides – RSL Editor",
   description:
     "This section includes end-to-end guides for developing Next.js 13 apps.",
 };

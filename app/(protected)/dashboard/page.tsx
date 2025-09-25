@@ -4,7 +4,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { RslStats } from "@/components/dashboard/rsl-stats";
 
 export const metadata = constructMetadata({
-  title: "Dashboard – RSL",
+  title: "Dashboard – RSL Editor",
   description: "Create and manage content.",
 });
 

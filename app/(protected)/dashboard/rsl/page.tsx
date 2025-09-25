@@ -11,7 +11,7 @@ import { Icons } from "@/components/shared/icons";
 import { RSLList } from "@/components/rsl/rsl-list";
 
 export const metadata = constructMetadata({
-  title: "RSL – Dashboard",
+  title: "RSL – RSL Editor",
   description: "Create and manage your RSL configurations.",
 });
 

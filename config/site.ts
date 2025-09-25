@@ -4,7 +4,7 @@ import { env } from "@/env.mjs";
 const site_url = env.NEXT_PUBLIC_APP_URL;
 
 export const siteConfig: SiteConfig = {
-  name: "RSL",
+  name: "RSL Editor",
   description:
     "The open content licensing standard for the AI-first Internet. Really Simple Licensing makes it easy to manage content rights and permissions.",
   url: site_url,

@@ -9,7 +9,7 @@ import { PricingCards } from "@/components/pricing/pricing-cards";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 
 export const metadata = constructMetadata({
-  title: "Pricing – RSL",
+  title: "Pricing – RSL Editor",
   description: "Choose the right plan for implementing Really Simple Licensing.",
 });
 

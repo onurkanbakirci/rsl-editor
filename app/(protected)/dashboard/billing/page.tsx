@@ -9,7 +9,7 @@ import { BillingInfo } from "@/components/pricing/billing-info";
 import { Icons } from "@/components/shared/icons";
 
 export const metadata = constructMetadata({
-  title: "Billing – RSL",
+  title: "Billing – RSL Editor",
   description: "Manage billing and your subscription plan.",
 });
 

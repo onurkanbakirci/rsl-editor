@@ -8,7 +8,7 @@ import { UserAuthForm } from "@/components/forms/user-auth-form";
 import { Icons } from "@/components/shared/icons";
 
 export const metadata: Metadata = {
-  title: "Login",
+  title: "Login – RSL Editor",
   description: "Login to your account",
 };
 

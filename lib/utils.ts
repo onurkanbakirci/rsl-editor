@@ -27,15 +27,19 @@ export function constructMetadata({
     title,
     description,
     keywords: [
-      "Next.js",
-      "React",
-      "Prisma",
-      "Neon",
-      "Auth.js",
-      "shadcn ui",
-      "Resend",
-      "React Email",
-      "Stripe",
+      "RSL Editor",
+      "RSL",
+      "Really Simple Licensing",
+      "Really Simple Licensing Editor",
+      "Really Simple Licensing Editor",
+      "Licensing",
+      "Content Licensing",
+      "Content Licensing Editor",
+      "Content Licensing Editor",
+      "AI-first",
+      "AI-first Internet",
+      "AI-first Internet",
+      "AI"
     ],
     authors: [
       {
