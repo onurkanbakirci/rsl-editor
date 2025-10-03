@@ -43,6 +43,11 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
       return true;
     }
     
+    // For Validator route
+    if (itemHref === "/dashboard/validator" && path.startsWith("/dashboard/validator")) {
+      return true;
+    }
+    
     return false;
   };
 
@@ -210,6 +215,11 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
     
     // For RSL routes, consider sub-routes as active
     if (itemHref === "/dashboard/rsl" && path.startsWith("/dashboard/rsl")) {
+      return true;
+    }
+    
+    // For Validator route
+    if (itemHref === "/dashboard/validator" && path.startsWith("/dashboard/validator")) {
       return true;
     }
     
