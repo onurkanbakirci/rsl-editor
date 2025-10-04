@@ -50,7 +50,7 @@ export default function IndexPage() {
       
       {/* <Powered /> */}
       
-      <motion.div
+{/*       <motion.div
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -58,7 +58,7 @@ export default function IndexPage() {
         transition={{ duration: 0.6, delay: 0.4 }}
       >
         <BentoGrid />
-      </motion.div>
+      </motion.div> */}
       
       <motion.div
         initial="hidden"
