@@ -152,7 +152,15 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                                 <Icon className="size-5" />
                                 {item.title}
                                 {item.badge && (
-                                  <Badge className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full">
+                                  <Badge 
+                                    variant={typeof item.badge === 'string' ? "secondary" : "default"}
+                                    className={cn(
+                                      "ml-auto flex shrink-0 items-center justify-center",
+                                      typeof item.badge === 'string' 
+                                        ? "px-2 py-0.5 text-xs" 
+                                        : "size-5 rounded-full"
+                                    )}
+                                  >
                                     {item.badge}
                                   </Badge>
                                 )}
@@ -284,7 +292,15 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
                               <Icon className="size-5" />
                               {item.title}
                               {item.badge && (
-                                <Badge className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full">
+                                <Badge 
+                                  variant={typeof item.badge === 'string' ? "secondary" : "default"}
+                                  className={cn(
+                                    "ml-auto flex shrink-0 items-center justify-center",
+                                    typeof item.badge === 'string' 
+                                      ? "px-2 py-0.5 text-xs" 
+                                      : "size-5 rounded-full"
+                                  )}
+                                >
                                   {item.badge}
                                 </Badge>
                               )}

@@ -18,7 +18,7 @@ export type SiteConfig = {
 export type NavItem = {
   title: string;
   href: string;
-  badge?: number;
+  badge?: number | string;
   disabled?: boolean;
   external?: boolean;
   authorizeOnly?: UserRole;

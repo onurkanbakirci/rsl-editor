@@ -21,7 +21,7 @@ export const sidebarLinks: SidebarNavItem[] = [
       // },
       // { href: "/dashboard/charts", icon: "lineChart", title: "Charts" },
       { href: "/dashboard/rsl", icon: "shield", title: "RSLs" },
-      { href: "/dashboard/validator", icon: "checkCircle", title: "Validator" },
+      { href: "/dashboard/validator", icon: "checkCircle", title: "Validator", badge: "Beta" },
       // {
       //   href: "/admin/orders",
       //   icon: "package",
