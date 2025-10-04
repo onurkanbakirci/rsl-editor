@@ -832,12 +832,105 @@ export function getAvailablePaymentTypes(): Array<{ value: string; label: string
 }
 
 /**
+ * Fallback regex-based XML parser for server environments when JSDOM is not available
+ */
+function parseRslXmlWithRegex(xmlContent: string, websiteUrl: string): EditableContent[] {
+  const contents: EditableContent[] = [];
+  
+  // Extract content elements using regex
+  const contentRegex = /<content[^>]*>/g;
+  const contentMatches = xmlContent.match(contentRegex);
+  
+  if (!contentMatches) {
+    return [{
+      url: websiteUrl,
+      licenseServer: '',
+      encrypted: false,
+      lastModified: '',
+      licenses: [createNewLicense()],
+      metadata: {
+        schemaUrl: '',
+        copyrightHolder: '',
+        copyrightType: 'person',
+        contactEmail: '',
+        contactUrl: '',
+        termsUrl: ''
+      }
+    }];
+  }
+  
+  contentMatches.forEach((contentMatch) => {
+    // Extract attributes using regex
+    const urlMatch = contentMatch.match(/url=["']([^"']*)["']/);
+    const serverMatch = contentMatch.match(/server=["']([^"']*)["']/);
+    const encryptedMatch = contentMatch.match(/encrypted=["']([^"']*)["']/);
+    const lastmodMatch = contentMatch.match(/lastmod=["']([^"']*)["']/);
+    
+    const contentUrl = urlMatch ? urlMatch[1] : websiteUrl;
+    const licenseServer = serverMatch ? serverMatch[1] : '';
+    const encrypted = encryptedMatch ? encryptedMatch[1] === 'true' : false;
+    const lastModified = lastmodMatch ? lastmodMatch[1] : '';
+    
+    // For the regex fallback, we'll create a default license since parsing nested elements is complex
+    const content: EditableContent = {
+      url: contentUrl,
+      licenseServer,
+      encrypted,
+      lastModified,
+      licenses: [createNewLicense()],
+      metadata: {
+        schemaUrl: '',
+        copyrightHolder: '',
+        copyrightType: 'person',
+        contactEmail: '',
+        contactUrl: '',
+        termsUrl: ''
+      }
+    };
+    
+    contents.push(content);
+  });
+  
+  return contents.length > 0 ? contents : [{
+    url: websiteUrl,
+    licenseServer: '',
+    encrypted: false,
+    lastModified: '',
+    licenses: [createNewLicense()],
+    metadata: {
+      schemaUrl: '',
+      copyrightHolder: '',
+      copyrightType: 'person',
+      contactEmail: '',
+      contactUrl: '',
+      termsUrl: ''
+    }
+  }];
+}
+
+/**
  * Parses RSL XML content to extract editable configuration data for editing
  */
 export function parseRslXmlToEditableContent(xmlContent: string, websiteUrl: string): EditableContent[] {
   try {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+    // Use a server-side XML parser that works in both browser and Node.js environments
+    let xmlDoc: Document;
+    
+    if (typeof window !== 'undefined' && window.DOMParser) {
+      // Browser environment
+      const parser = new DOMParser();
+      xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+    } else {
+      // Server environment - use the JSDOM from crawlee dependencies
+      try {
+        const { JSDOM } = require('jsdom');
+        const dom = new JSDOM(xmlContent, { contentType: 'text/xml' });
+        xmlDoc = dom.window.document;
+      } catch (jsdomError) {
+        // Fallback to a simple regex-based parser for server environment
+        return parseRslXmlWithRegex(xmlContent, websiteUrl);
+      }
+    }
 
     const contentElements = xmlDoc.getElementsByTagName('content');
     const contents: EditableContent[] = [];
