@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Copy, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,27 +30,9 @@ export function ValidatorForm() {
   const [isValidating, setIsValidating] = useState(false);
   const [activeTab, setActiveTab] = useState("paste");
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.xml') && !file.name.endsWith('.rsl')) {
-      toast.error("Please upload an XML or RSL file");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setRslContent(content);
-      setActiveTab("paste"); // Switch to paste tab to show the content
-    };
-    reader.readAsText(file);
-  };
-
-  const validateRslDocument = async () => {
+  const validateRslDocument = useCallback(async () => {
     if (!rslContent.trim()) {
-      toast.error("Please provide RSL content to validate");
+      setValidationResult(null);
       return;
     }
 
@@ -82,6 +64,37 @@ export function ValidatorForm() {
     } finally {
       setIsValidating(false);
     }
+  }, [rslContent]);
+
+  // Auto-validate when content changes
+  useEffect(() => {
+    if (rslContent.trim()) {
+      const timeoutId = setTimeout(() => {
+        validateRslDocument();
+      }, 500); // Debounce validation by 500ms
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setValidationResult(null);
+    }
+  }, [rslContent, validateRslDocument]);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xml') && !file.name.endsWith('.rsl')) {
+      toast.error("Please upload an XML or RSL file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setRslContent(content);
+      setActiveTab("paste"); // Switch to paste tab to show the content
+    };
+    reader.readAsText(file);
   };
 
   const copyToClipboard = (text: string) => {
@@ -113,11 +126,6 @@ export function ValidatorForm() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  const clearAll = () => {
-    setRslContent("");
-    setValidationResult(null);
   };
 
   return (
@@ -173,19 +181,6 @@ export function ValidatorForm() {
               />
             </TabsContent>
           </Tabs>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={validateRslDocument}
-              disabled={!rslContent.trim() || isValidating}
-              className="flex-1"
-            >
-              {isValidating ? "Validating..." : "Validate RSL"}
-            </Button>
-            <Button variant="outline" onClick={clearAll}>
-              Clear
-            </Button>
-          </div>
         </CardContent>
       </Card>
 

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { parseRslXmlToEditableContent, validateRslDataComprehensive, RslContent } from "@/lib/rsl-generator";
+import { parseRslXmlToEditableContent } from "@/lib/rsl-parser-server";
+import { RslContent } from "@/lib/rsl-generator";
+import { validateRslDataComprehensive } from "@/lib/rsl-validator";
 
 const validateRequestSchema = z.object({
   xmlContent: z.string().min(1, "XML content is required"),
