@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Copy, Download } from "lucide-react";
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Copy, Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +52,7 @@ export function ValidatorForm() {
 
       const result = await response.json();
       setValidationResult(result);
-      
+
       if (result.isValid) {
         toast.success("RSL document is valid!");
       } else {
@@ -72,7 +72,7 @@ export function ValidatorForm() {
       const timeoutId = setTimeout(() => {
         validateRslDocument();
       }, 500); // Debounce validation by 500ms
-      
+
       return () => clearTimeout(timeoutId);
     } else {
       setValidationResult(null);
@@ -97,36 +97,7 @@ export function ValidatorForm() {
     reader.readAsText(file);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  };
 
-  const downloadResults = () => {
-    if (!validationResult) return;
-
-    const results = {
-      timestamp: new Date().toISOString(),
-      isValid: validationResult.isValid,
-      summary: {
-        errors: validationResult.errors.length,
-        warnings: validationResult.warnings.length,
-      },
-      details: validationResult.results,
-    };
-
-    const blob = new Blob([JSON.stringify(results, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rsl-validation-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -147,12 +118,15 @@ export function ValidatorForm() {
               <TabsTrigger value="upload">Upload File</TabsTrigger>
               <TabsTrigger value="paste">Paste Content</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="upload" className="space-y-4">
               <div className="flex items-center justify-center w-full">
                 <label
                   htmlFor="file-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg transition-colors ${isValidating
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer hover:bg-muted/50'
+                    }`}
                 >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
@@ -167,17 +141,19 @@ export function ValidatorForm() {
                     className="hidden"
                     accept=".xml,.rsl"
                     onChange={handleFileUpload}
+                    disabled={isValidating}
                   />
                 </label>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="paste" className="space-y-4">
               <Textarea
                 placeholder="Paste your RSL XML content here..."
                 value={rslContent}
                 onChange={(e) => setRslContent(e.target.value)}
                 className="min-h-[200px] font-mono text-sm"
+                disabled={isValidating}
               />
             </TabsContent>
           </Tabs>
@@ -188,7 +164,9 @@ export function ValidatorForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {validationResult?.isValid ? (
+            {isValidating ? (
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+            ) : validationResult?.isValid ? (
               <CheckCircle className="h-5 w-5 text-green-500" />
             ) : validationResult?.isValid === false ? (
               <XCircle className="h-5 w-5 text-red-500" />
@@ -198,13 +176,21 @@ export function ValidatorForm() {
             Validation Results
           </CardTitle>
           <CardDescription>
-            {validationResult
-              ? `${validationResult.errors.length} errors, ${validationResult.warnings.length} warnings`
-              : "Results will appear here after validation"}
+            {isValidating
+              ? "Validating RSL document..."
+              : validationResult
+                ? `${validationResult.errors.length} errors, ${validationResult.warnings.length} warnings`
+                : "Results will appear here after validation"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!validationResult ? (
+          {isValidating ? (
+            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <p>Validating your RSL document...</p>
+              <p className="text-sm text-muted-foreground">This may take a few moments</p>
+            </div>
+          ) : !validationResult ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground">
               No validation results yet
             </div>
@@ -233,11 +219,11 @@ export function ValidatorForm() {
                   {validationResult.results.map((result, index) => (
                     <div key={index}>
                       <Alert className={
-                        result.type === 'error' 
-                          ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950' 
+                        result.type === 'error'
+                          ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
                           : result.type === 'warning'
-                          ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
-                          : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                            ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
+                            : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
                       }>
                         <AlertDescription className="text-sm">
                           <div className="flex items-start gap-2">
@@ -265,7 +251,7 @@ export function ValidatorForm() {
                       )}
                     </div>
                   ))}
-                  
+
                   {validationResult.results.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
                       <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
@@ -275,21 +261,6 @@ export function ValidatorForm() {
                 </div>
               </ScrollArea>
 
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(JSON.stringify(validationResult, null, 2))}
-                >
-                  <Copy className="h-4 w-4 mr-1" />
-                  Copy Results
-                </Button>
-                <Button variant="outline" size="sm" onClick={downloadResults}>
-                  <Download className="h-4 w-4 mr-1" />
-                  Download Report
-                </Button>
-              </div>
             </div>
           )}
         </CardContent>
