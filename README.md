@@ -32,16 +32,22 @@
 
 RSL provides a clear, consistent way to define content usage rights, permissions, and restrictions, making it easy for content creators, publishers, and AI systems to understand and respect licensing terms.
 
-### What is Really Simple Licensing (RSL)?
+### Features
 
 RSL is an open standard designed to address the challenges of content licensing in an AI-first world. It provides:
 
-- **Standardized Format**: Machine-readable XML format for consistent licensing across platforms
-- **AI-Ready**: Purpose-built for AI training and content consumption use cases
-- **Flexible Permissions**: Support for various licensing models from open to restrictive
-- **Clear Rights Management**: Define what can and cannot be done with your content
-
-
+- **Visual RSL Builder**: Intuitive form-based editor for creating RSL documents with real-time configuration
+- **RSL Document Management**: Centralized dashboard to store, organize, and manage all RSL documents
+- **RSL Validation**: Built-in validator with comprehensive error checking and best practice warnings
+- **Website Crawling**: Automated web crawling to discover and analyze website pages for RSL creation
+- **XML Generation**: Automatic generation of machine-readable RSL XML documents
+- **RSS Integration**: Generate RSS feeds with embedded RSL licensing data
+- **Web Pages Integration**: Embed RSL data directly into web pages and HTML documents
+- **Media Files Integration**: Support for various media file formats with RSL metadata
+- **Multi-License Support**: Configure multiple license types (commercial, non-commercial, AI training)
+- **Permission Management**: Define granular permissions and user restrictions
+- **Sitemap Parsing**: Extract website structure from XML sitemaps
+- **Batch Operations**: Process multiple pages and RSL documents simultaneously
 
 ## Usage
 
