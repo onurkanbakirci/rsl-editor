@@ -34,7 +34,7 @@ RSL provides a clear, consistent way to define content usage rights, permissions
 
 ### Features
 
-RSL is an open standard designed to address the challenges of content licensing in an AI-first world. It provides:
+RSL Editor is an open standard designed to address the challenges of content licensing in an AI-first world. It provides:
 
 - **Visual RSL Builder**: Intuitive form-based editor for creating RSL documents with real-time configuration
 - **RSL Document Management**: Centralized dashboard to store, organize, and manage all RSL documents
