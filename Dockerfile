@@ -7,24 +7,24 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules 
+COPY --from=deps /app/node_modules ./node_modules
 
-# Copy all source files
+# Copy remaining files
 COPY . .
+# Remove any .env files that might have been copied
+RUN rm -f .env .env.* || true
 
 # Next.js collects completely anonymous telemetry data about general usage.
-# Disable telemetry during the build.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Set base URL for build (can be overridden at runtime)
-ENV NEXT_PUBLIC_BASE_URL=https://rsl-editor.onurkanbakirci.com
 
 # Build the application
 RUN npm run build
@@ -36,16 +36,28 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create the nextjs user and group for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Install required libraries
+RUN apk add --no-cache libc6-compat
 
-# Copy public folder (contains all the skills data)
+# Create the nextjs user and group
+RUN addgroup -g 1001 nodejs
+RUN adduser -S nextjs -u 1001 -G nodejs
+
+# Copy necessary files and directories
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
 
-# Set the correct permission for prerender cache
+# Copy data directory for JSON storage
+COPY --from=builder /app/data ./data
+
+# Set the correct permission for prerender cache and data directory
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN chown nextjs:nodejs /app/.next
+
+# Ensure data directory has correct permissions
+RUN chown -R nextjs:nodejs /app/data
+RUN chmod 755 /app/data
+RUN chmod 644 /app/data/users.json || true
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
@@ -58,6 +70,6 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_PUBLIC_API_URL="http://localhost:3000"
 
-# Start the application
-CMD ["node", "server.js"]
+ENTRYPOINT ["node", "server.js"]
