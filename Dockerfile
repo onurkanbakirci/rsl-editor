@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -70,6 +70,10 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_PUBLIC_API_URL="http://localhost:3000"
+ENV NEXT_PUBLIC_API_URL="https://rsl-editor.onurkanbakirci.com"
+ENV NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PLAN_ID=asdasd
+ENV NEXT_PUBLIC_STRIPE_PRO_YEARLY_PLAN_ID=asdasd
+ENV NEXT_PUBLIC_STRIPE_BUSINESS_MONTHLY_PLAN_ID=adasd
+ENV NEXT_PUBLIC_STRIPE_BUSINESS_YEARLY_PLAN_ID=asdasd
 
 ENTRYPOINT ["node", "server.js"]
