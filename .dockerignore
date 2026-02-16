@@ -1,7 +1,6 @@
 # Dependencies
 node_modules
 npm-debug.log
-package-lock.json*
 
 # Next.js
 .next
@@ -13,8 +12,7 @@ out
 .git
 .gitignore
 
-# Environment variables
-.env
+# Environment variables (keep .env for build-time NEXT_PUBLIC_* vars)
 .env*.local
 .env.local
 .env.development.local

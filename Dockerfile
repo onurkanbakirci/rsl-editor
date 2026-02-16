@@ -2,11 +2,13 @@ FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
+# Copy prisma schema for postinstall script
+COPY prisma ./prisma/
 RUN npm install --legacy-peer-deps
 
 # Rebuild the source code only when needed
@@ -16,10 +18,8 @@ WORKDIR /app
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy remaining files
+# Copy remaining files (including .env for NEXT_PUBLIC_* build-time vars)
 COPY . .
-# Remove any .env files that might have been copied
-RUN rm -f .env .env.* || true
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -47,17 +47,13 @@ RUN adduser -S nextjs -u 1001 -G nodejs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 
-# Copy data directory for JSON storage
-COPY --from=builder /app/data ./data
-
 # Set the correct permission for prerender cache and data directory
-RUN mkdir .next
+RUN mkdir -p .next data
 RUN chown nextjs:nodejs /app/.next
 
 # Ensure data directory has correct permissions
 RUN chown -R nextjs:nodejs /app/data
 RUN chmod 755 /app/data
-RUN chmod 644 /app/data/users.json || true
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
@@ -70,7 +66,8 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_PUBLIC_API_URL="https://rsl-editor.onurkanbakirci.com"
+
+ENV NEXT_PUBLIC_APP_URL=https://rsl-editor.onurkanbakirci.com
 ENV NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PLAN_ID=asdasd
 ENV NEXT_PUBLIC_STRIPE_PRO_YEARLY_PLAN_ID=asdasd
 ENV NEXT_PUBLIC_STRIPE_BUSINESS_MONTHLY_PLAN_ID=adasd
